@@ -7,11 +7,10 @@
 
 #include <inttypes.h>
 #include <vector>
-#include "qdags.hpp"
-#include "../src/joins.cpp"
-#include <optional>
 
 #include "ghd_solver.hpp"
+#include "qdags.hpp"
+#include "../src/joins.cpp"
 
 using namespace std;
 
@@ -20,23 +19,46 @@ class ghd {
     vector<ghd> children;
 
 public:
-
     ghd() = default;
 
-    ghd(vector<qdag> qdags, vector<ghd> subtrees) {
-        relations = qdags;
-        children = subtrees;
+    ghd(const std::vector<qdag>& qdags, const std::vector<ghd>& subtrees)
+        : relations(qdags)
+        , children(subtrees)
+    {
     }
 
-    vector<qdag> get_relations(){
+    const std::vector<qdag>& get_relations() const
+    {
         return relations;
     }
 
-    vector<ghd> get_children(){
+    const std::vector<ghd>& get_children() const
+    {
         return children;
     }
 
-    void collect_all_nodes(vector<ghd*> &subtree){
+    vector<qdag> get_child_qdags() const
+    {
+        // This will be used during semijoin, so there will only be 1 qdag per vector
+        // obtengo el primer qdag que guarda cada uno de mis hijos en su nodo
+        vector<qdag> results;
+        results.reserve(children.size());
+        for (const auto& child : children) {
+            results.push_back(child.get_relations().front());
+        }
+        return results;
+    }
+
+    void get_subtree_qdags(vector<qdag>& subtree) const
+    {
+        subtree.push_back(relations.front());
+        for (const auto& child : children) {
+            child.get_subtree_qdags(subtree);
+        }
+    }
+
+    void collect_all_nodes(vector<ghd*>& subtree)
+    {
 
         subtree.push_back(this);
 
@@ -46,30 +68,13 @@ public:
         }
     }
 
-    vector<qdag> get_child_qdags(){
-        // This will be used during semijoin, so there will only be 1 qdag per vector
-        // obtengo el primer qdag que guarda cada uno de mis hijos en su nodo
-        vector<qdag> results;
-        for (auto child = children.begin(); child != children.end(); child++){
-            results.push_back(child->get_relations().front());
-        }
-        return results;
-    }
-
-    void get_subtree_qdags(vector<qdag> &subtree){
-
-        subtree.push_back(relations.front());
-        for (auto child = children.begin(); child != children.end(); child++){
-
-            child->get_subtree_qdags(subtree);
-        }
-    }
-
-    void set_relations(vector<qdag> new_relations){
+    void set_relations(const vector<qdag> new_relations)
+    {
         relations = new_relations;
     }
 
-    void exec_multijoin(){
+    void exec_multijoin()
+    {
         // ejecuta multijoin entre las relaciones del nodo y reemplaza el vector de relaciones
         if (relations.size() == 1) {
             return;
@@ -80,22 +85,22 @@ public:
         relations.shrink_to_fit();
     }
 
-    void deep_exec_multijoin(){
+    void deep_exec_multijoin()
+    {
         exec_multijoin();
-        for (auto child = children.begin(); child != children.end(); child++){
+        for (auto child = children.begin(); child != children.end(); child++) {
             child->deep_exec_multijoin();
         }
     }
 
-
-    void constrained_by_children(){
+    void constrained_by_children()
+    {
         // si soy hoja empiezo a subir
-        if (children.empty()){
+        if (children.empty()) {
             return;
-        }
-        else{
+        } else {
             // bajo por el árbol
-            for (auto child = children.begin(); child != children.end(); child++){
+            for (auto child = children.begin(); child != children.end(); child++) {
                 child->constrained_by_children();
             }
             // semijoin entre nodo y sus hijos. Debo pasarle un vector en el cual el primer elemento sea
@@ -108,13 +113,13 @@ public:
     }
 
     // constrain children
-    //iterar sobre hijos y llamar semijoin entre hijo_i y nodo
-    void constrain_children(){
+    // iterar sobre hijos y llamar semijoin entre hijo_i y nodo
+    void constrain_children()
+    {
         // si soy hoja termino
-        if (children.empty()){
+        if (children.empty()) {
             return;
-        }
-        else {
+        } else {
             vector<qdag> pair(2);
             pair[1] = relations.front();
             for (auto child = children.begin(); child != children.end(); child++) {
@@ -126,20 +131,20 @@ public:
                 child->constrain_children();
             }
         }
-
     }
 
-    uint64_t size() {
+    uint64_t size()
+    {
         uint64_t total = 0;
-        for (auto qdag = relations.begin(); qdag != relations.end(); qdag++){
+        for (auto qdag = relations.begin(); qdag != relations.end(); qdag++) {
             total += qdag->size();
         }
-        for (auto child = children.begin(); child != children.end(); child++){
+        for (auto child = children.begin(); child != children.end(); child++) {
             total += child->size();
         }
         return total;
     }
-    
+
     void print_n_ones(std::optional<std::reference_wrapper<std::ofstream>> outfile)
     {
         outfile->get() << n_ones();
@@ -167,9 +172,6 @@ public:
         return relations.front().n_ones();
     }
 
-    /*
-     *  creates a GHD given a set of bags of vertices
-     */
     ghd get_optimal_ghd(int number_of_nodes, int number_of_edges, const vector<pair<int,int>>& edges, vector<qdag> qdags) {
         GHDSolver solver;
         GHDSolver::GHDResult res = solver.solve(number_of_nodes, number_of_edges, edges);
@@ -308,5 +310,4 @@ public:
     }
 };
 
-
-#endif //CCQ_QDAGS_GHD_HPP
+#endif // CCQ_QDAGS_GHD_HPP
