@@ -1,4 +1,4 @@
-/* 
+/*
     Copyright (C) 2020 Diego Arroyuelo
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,18 +20,18 @@
 #ifndef SE_QUADTREE
 #define SE_QUADTREE
 
-#include <deque>
-#include <queue>
+#include "rank.hpp"
 #include <bitset>
+#include <deque>
+#include <fstream>
+#include <inttypes.h>
+#include <queue>
+#include <sdsl/bit_vectors.hpp>
+#include <sdsl/int_vector_buffer.hpp>
+#include <sdsl/k2_tree_helper.hpp>
+#include <set>
 #include <stdexcept>
 #include <tuple>
-#include <fstream>
-#include <set>
-#include <inttypes.h>
-#include <sdsl/bit_vectors.hpp>
-#include <sdsl/k2_tree_helper.hpp>
-#include <sdsl/int_vector_buffer.hpp>
-#include "rank.hpp"
 
 //! A k^2-tree
 /*! A k^2-tree is a compact tree structure to represent a web graph. The
@@ -48,17 +48,14 @@
 using namespace sdsl;
 using namespace std;
 
-class se_quadtree
-{
+class se_quadtree {
 public:
     typedef k2_tree_ns::idx_type idx_type;
     typedef k2_tree_ns::size_type size_type;
-    rank_bv_64 *bv;
-    rank_bv_64 *active;
+    rank_bv_64* bv;
+    rank_bv_64* active;
 
 private:
-    //rank_support_v<> *bv_rank;
-
     uint16_t height; // number of levels of the tree
 
     uint8_t k;
@@ -69,24 +66,23 @@ private:
 
 protected:
     /*! Get the chunk index ([0, k^d[) of a submatrix point.
- *
- * Gets a point in the global matrix and returns its corresponding chunk
- * in the submatrix specified.
- *
- * \param point vector representing the d dimensional point.
- * \param offset vector with the upper-left point of the global matrix
- * \param l size of the chunk at the submatrix.
- * \param k the k parameter from the k^2 tree.
- * \returns the index of the chunk containing the point at the submatrix.
- */
-    uint16_t get_chunk_idx(vector<idx_type> &point, idx_type *offset,
-                           size_type l, uint8_t _k)
+     *
+     * Gets a point in the global matrix and returns its corresponding chunk
+     * in the submatrix specified.
+     *
+     * \param point vector representing the d dimensional point.
+     * \param offset vector with the upper-left point of the global matrix
+     * \param l size of the chunk at the submatrix.
+     * \param k the k parameter from the k^2 tree.
+     * \returns the index of the chunk containing the point at the submatrix.
+     */
+    uint16_t get_chunk_idx(vector<idx_type>& point, idx_type* offset,
+        size_type l, uint8_t _k)
     {
         uint16_t i, _d = point.size();
         uint16_t total_sum = 0, _k_aux = 1;
 
-        for (i = _d - 1; i > 0; --i)
-        {
+        for (i = _d - 1; i > 0; --i) {
             total_sum += ((point[i] - offset[i]) / l) * _k_aux;
             _k_aux *= _k;
         }
@@ -96,39 +92,38 @@ protected:
     }
 
     //! Build a space efficient quadtree from a set of d-dimensional points
-    /*! This method takes a vector of d-dimensional points 
+    /*! This method takes a vector of d-dimensional points
          *  and the grid-side size. It takes linear time over the amount of
          *  points to build the quadtree representation.
          *  \param edges A non-empty vector with the d-dimensional points
-         *  \param size side of the grid containing the points, all the point 
+         *  \param size side of the grid containing the points, all the point
                         coordinates in vector edges must be within [0, size[
          */
-    void build_from_edges(std::vector<std::vector<idx_type>> &edges,
-                          const size_type size, uint8_t __k, uint8_t __d)
+    void build_from_edges(std::vector<std::vector<idx_type>>& edges,
+        const size_type size, uint8_t __k, uint8_t __d)
     {
 
-        typedef std::tuple<idx_type, idx_type, size_type, idx_type *> t_part_tuple;
+        typedef std::tuple<idx_type, idx_type, size_type, idx_type*> t_part_tuple;
 
         k = __k;
         d = __d;
         height = std::ceil(std::log(size) / std::log(k));
         height = height > 1 ? height : 1; // If size == 0
 
-        //an array with a rank supporting bit vector per level in the tree
+        // an array with a rank supporting bit vector per level in the tree
         bv = new rank_bv_64[height];
 
         // an array with a rank supporting bit vector per level in the tree
         // each bv indicates if a point is active in the relation
         active = new rank_bv_64[height];
 
-        //aux array that will store the number of ones per level
+        // aux array that will store the number of ones per level
         total_ones.reserve(height);
 
         k_d = std::pow(k, d);
 
-        //create a bit vector of size k^d full of 0s
+        // create a bit vector of size k^d full of 0s
         bit_vector k_t_ = bit_vector(k_d, 0); // OJO, cuidado con esto
-        // NOTA: se podrá usar esto en vez de rankbv para el bm de active?
         // create bit vector of size kd full of 1s, because at first all cells are active
         bit_vector active_;
 
@@ -136,30 +131,28 @@ protected:
         idx_type t = 0, last_level = 0;
         idx_type i, j, r_0, c_0, it, c, r, z;
         size_type l = std::pow(k, height - 1);
-
+        // 2^25 da distinto
         std::vector<idx_type> pos_by_chunk(k_d + 1, 0);
 
-        idx_type *top_left_point = new idx_type[d]();
-        idx_type *top_left_point_aux;
+        idx_type* top_left_point = new idx_type[d]();
+        idx_type* top_left_point_aux;
 
         q.push(t_part_tuple(0, edges.size(), l, top_left_point));
 
         size_type cur_l = l, cur_level = 0, n_ones = 0;
 
-        while (!q.empty())
-        {
+        while (!q.empty()) {
 
             std::vector<idx_type> amount_by_chunk(k_d, 0);
             std::tie(i, j, l, top_left_point) = q.front();
             q.pop();
 
-            if (l != cur_l)
-            {
+            if (l != cur_l) {
                 cur_l = l;
                 k_t_.resize(t);
                 active_ = bit_vector(t, 1);
-                bv[cur_level] = rank_bv_64(k_t_);
-                active[cur_level] = rank_bv_64(active_);
+                bv[cur_level] = rank_bv_64(k_t_, k_d);
+                active[cur_level] = rank_bv_64(active_, k_d);
                 total_ones[cur_level] = bv[cur_level].n_ones();
                 cur_level++;
                 t = 0;
@@ -172,8 +165,7 @@ protected:
             for (it = i; it < j; it++)
                 amount_by_chunk[get_chunk_idx(edges[it], top_left_point, l, k)] += 1;
 
-            if (l == 1)
-            {
+            if (l == 1) {
                 for (it = 0; it < k_d; it++, t++)
                     if (amount_by_chunk[it] != 0)
                         k_t_[t] = 1;
@@ -194,8 +186,7 @@ protected:
             // Push to the queue every non zero elements chunk
             for (it = 0; it < k_d; it++, t++)
                 // If not empty chunk, set bit to 1
-                if (amount_by_chunk[it] != 0)
-                {
+                if (amount_by_chunk[it] != 0) {
                     uint16_t p = std::pow(k, d - 1);
                     idx_type it_aux = it;
                     c = it % k;
@@ -204,8 +195,7 @@ protected:
 
                     top_left_point_aux = new idx_type[d]();
 
-                    for (z = 0; z < d - 1; ++z)
-                    {
+                    for (z = 0; z < d - 1; ++z) {
                         r = it_aux / p;
                         it_aux -= r * p;
                         p /= k;
@@ -215,26 +205,23 @@ protected:
                     top_left_point_aux[d - 1] = top_left_point[d - 1] + c * l;
 
                     q.push(t_part_tuple(pos_by_chunk[it],
-                                        pos_by_chunk[it + 1],
-                                        l / k,
-                                        top_left_point_aux));
-                }
-                else
+                        pos_by_chunk[it + 1],
+                        l / k,
+                        top_left_point_aux));
+                } else
                     k_t_[t] = 0;
 
             idx_type chunk;
 
             // Sort edges' vector
-            for (unsigned ch = 0; ch < k_d; ch++)
-            {
+            for (unsigned ch = 0; ch < k_d; ch++) {
                 idx_type be = ch == 0 ? i : pos_by_chunk[ch - 1];
-                for (it = pos_by_chunk[ch]; it < be + amount_by_chunk[ch];)
-                {
+                for (it = pos_by_chunk[ch]; it < be + amount_by_chunk[ch];) {
                     chunk = get_chunk_idx(edges[it], top_left_point, l, k);
 
                     if (pos_by_chunk[chunk] != it)
                         std::iter_swap(edges.begin() + it,
-                                       edges.begin() + pos_by_chunk[chunk]);
+                            edges.begin() + pos_by_chunk[chunk]);
                     else
                         it++;
                     pos_by_chunk[chunk]++;
@@ -244,9 +231,9 @@ protected:
         }
 
         k_t_.resize(t);
-        bv[height - 1] = rank_bv_64(k_t_);
+        bv[height - 1] = rank_bv_64(k_t_, k_d);
         active_ = bit_vector(t, 1);
-        active[height - 1] = rank_bv_64(active_);
+        active[height - 1] = rank_bv_64(active_, k_d);
 
         total_ones[height - 1] = bv[height - 1].n_ones();
     }
@@ -257,6 +244,7 @@ public:
     uint64_t size()
     {
         uint64_t i, s = 0;
+
         for (i = 0; i < height; i++) {
             s += bv[i].size_in_bytes();
             s += active[i].size_in_bytes();
@@ -274,8 +262,8 @@ public:
                         vector must be within 0 and size ([0, size[).
          */
 
-    se_quadtree(std::vector<std::vector<idx_type>> &edges,
-                const size_type grid_side, uint8_t __k, uint8_t __d)
+    se_quadtree(std::vector<std::vector<idx_type>>& edges,
+        const size_type grid_side, uint8_t __k, uint8_t __d)
     {
         assert(grid_side > 0);
         assert(edges.size() > 0);
@@ -295,19 +283,14 @@ public:
         total_ones.reserve(height);
 
         k_d = std::pow(k, d);
-
-        // cout << /*"Join has " <<*/ _bv[height-1].size() << " \t"/* << endl*/;
-
-        for (uint64_t i = 0; i < height; i++)
-        {
-            bv[i] = rank_bv_64(_bv[i]);
+        for (uint64_t i = 0; i < height; i++) {
+            bv[i] = rank_bv_64(_bv[i], k_d);
             total_ones[i] = _bv[i].size();
         }
 
         active = new rank_bv_64[height];
-        for (uint64_t j = 0; j < height; j++)
-        {
-            active[j] = rank_bv_64(_active[j]);
+        for (uint64_t j = 0; j < height; j++) {
+            active[j] = rank_bv_64(_active[j], k_d);
         }
     }
 
@@ -339,42 +322,54 @@ public:
         return bv[level].rank(node);
     }
 
-    inline uint64_t get_node_lastlevel(uint16_t level, uint64_t node)
+    void get_children(uint16_t level, uint64_t node, uint64_t* children_array, uint16_t& n_children)
     {
-        return bv[level].get_bits(node, k_d) & active[level].get_bits(node, k_d);
-    }
+        n_children = 0;
+        // Hay que hacer el chequeo de que no exceda la posición máxima del nodo desde get_children.
+        uint64_t pos = node;
 
-    inline uint64_t get_node(uint16_t level, uint64_t node, uint64_t *rank_array, uint64_t rank_value)
-    {
-        uint64_t nd;
-        uint64_t nd_active;
-
-        nd = bv[level].get_bits(node, k_d);
-        nd_active = active[level].get_bits(node, k_d);
-
-        int acc= 1;
-        for (int i = 0; i < k_d; ++i) {
-            int mask = 1 << i;
-            if (mask & nd) {
-                rank_array[i] = rank_value + acc;
-                acc++;
-            }
+        pos = bv[level].select_next(pos);
+        while (pos < node + k_d) {
+            // hay que guardar la posición relativa o absoluta?
+            children_array[n_children++] = pos % k_d;
+            pos++;
+            pos = bv[level].select_next(pos);
         }
-
-        return nd & nd_active;
+        // children son los 1 en el nodo o lo que esté en el siguiente nivel? es como un get bits pero solo las posiciones de los 1
     }
 
-    inline uint64_t get_node_active(uint16_t level, uint64_t node, vector<rank_bv_64> tactive)
+    void get_children_active(uint16_t level, uint64_t node, uint64_t* children_array, uint16_t& n_children)
     {
-        uint64_t nd;
+        n_children = 0;
+        // Hay que hacer el chequeo de que no exceda la posición máxima del nodo desde get_children.
+        uint64_t pos = node;
 
-        nd = (~(tactive[level].get_bits(node, k_d))) & ((1<<k_d) - 1);
-
-
-        return nd;
+        pos = bv[level].select_next_active(pos, active[level]);
+        while (pos < node + k_d) {
+            // hay que guardar la posición relativa o absoluta?
+            children_array[n_children++] = pos % k_d;
+            pos++;
+            pos = bv[level].select_next_active(pos, active[level]);
+        }
+        // children son los 1 en el nodo o lo que esté en el siguiente nivel? es como un get bits pero solo las posiciones de los 1
     }
 
+    void get_children_result(uint16_t level, uint64_t node, uint64_t* children_array, uint64_t& n_children, rank_bv_64 result)
+    {
+        n_children = 0;
+        // Hay que hacer el chequeo de que no exceda la posición máxima del nodo desde get_children.
+        uint64_t pos = node;
 
+        pos = result.select_next(pos);
+
+        while (pos < node + k_d) {
+            // hay que guardar la posición relativa o absoluta?
+            children_array[n_children++] = pos % k_d;
+            pos++;
+            pos = result.select_next(pos);
+        }
+        // children son los 1 en el nodo o lo que esté en el siguiente nivel? es como un get bits pero solo las posiciones de los 1
+    }
 
     uint64_t total_ones_level(uint16_t level)
     {
@@ -392,61 +387,53 @@ public:
     }
 
     // Prints quadtree level by level
-    void print(std::ostream &ost)
+    void print(std::ostream& ost)
     {
         size_type dim = pow(k, d);
-        uint64_t i, j, l, aa_r, zz;
+        uint64_t i, start, l, level_size;
         for (i = 0; i < height; i++) {
             if (bv[i].size() > 0)
-                aa_r = bv[i].size();
+                level_size = bv[i].size();
             else
-                aa_r = 0;
+                level_size = 0;
             ost << "level " << i << ": ";
 
-            for (int j = 0; j < aa_r; j++)
-            {
-                // read each byte
-                if (j % dim == 0)
-                {
-                    uint64_t x;
-                    x = +bv[i].get_bits(j, dim);
+            for (int start = 0; start < level_size; start += dim) {
+                vector<uint64_t> child = bv[i].get_bits(start, dim);
 
-                    for (int l = 0; l < dim; l++)
-                    {
-                        ost << ((x & (1 << l)) ? "1" : "0");
-                    }
-                    ost << " ";
+                // read each block
+                for (uint64_t block : child) {
+                    string s = bitset<64>(block).to_string();
+                    string reversed(s.rbegin(), s.rend());
+                    ost << reversed.substr(0, dim);
                 }
+                ost << " ";
             }
             ost << endl;
         }
     }
 
-    void print_active(std::ostream &ost)
+    void print_active(std::ostream& ost)
     {
         size_type dim = pow(k, d);
-        uint64_t i, j, l, aa_r, zz;
-        for (i = 0; i < height; i++) {
+        uint64_t i, start, l, level_size;
+        for (i = 1; i < height; i++) {
             if (active[i].size() > 0)
-                aa_r = active[i].size();
+                level_size = active[i].size();
             else
-                aa_r = 0;
+                level_size = 0;
             ost << "level " << i << ": ";
 
-            for (int j = 0; j < aa_r; j++)
-            {
-                // read each byte
-                if (j % dim == 0)
-                {
-                    uint64_t x;
-                    x = +active[i].get_bits(j, dim);
+            for (int start = 0; start < level_size; start += dim) {
+                vector<uint64_t> child = active[i].get_bits(start, dim);
 
-                    for (int l = 0; l < dim; l++)
-                    {
-                        ost << ((x & (1 << l)) ? "1" : "0");
-                    }
-                    ost << " ";
+                // read each block
+                for (auto block : child) {
+                    string s = bitset<64>(block).to_string();
+                    string reversed(s.rbegin(), s.rend());
+                    ost << reversed.substr(0, dim);
                 }
+                ost << " ";
             }
             ost << endl;
         }
