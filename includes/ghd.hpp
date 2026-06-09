@@ -8,7 +8,7 @@
 #include <inttypes.h>
 #include <vector>
 #include "qdags.hpp"
-#include "../src/joins_old.cpp"
+#include "../src/joins.cpp"
 #include <optional>
 
 #include "ghd_solver.hpp"
