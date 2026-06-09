@@ -44,13 +44,21 @@ target_link_libraries(t4_ghd ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/extern
 target_link_libraries(t4_ghd ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/external/libdivsufsort/lib/libdivsufsort64.a)
 
 add_executable(bowtie queries/bowtie.cpp
-        queries/bowtie_fast.cpp
         src/joins.cpp
-        includes/ghd_solver.hpp)
+        includes/ghd_solver.hpp
+        includes/sys/resource.h)
 
 target_link_libraries(bowtie ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/lib/libsdsl.a)
 target_link_libraries(bowtie ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/external/libdivsufsort/lib/libdivsufsort.a)
 target_link_libraries(bowtie ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/external/libdivsufsort/lib/libdivsufsort64.a)
+
+add_executable(bowtie_fast queries/bowtie_fast.cpp
+        src/joins.cpp
+        includes/ghd_solver.hpp)
+
+target_link_libraries(bowtie_fast ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/lib/libsdsl.a)
+target_link_libraries(bowtie_fast ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/external/libdivsufsort/lib/libdivsufsort.a)
+target_link_libraries(bowtie_fast ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/external/libdivsufsort/lib/libdivsufsort64.a)
 
 add_executable(tree_decomp_brute
         src/tree_decomp_brute/tree_decomp_brute.cpp

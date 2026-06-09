@@ -15,6 +15,7 @@ class GHDSolver {
 public:
     struct GHDResult {
         std::vector<std::vector<int>> bags;
+        std::vector<std::vector<int>> join_tree;
         double weight;
     };
 
@@ -70,6 +71,7 @@ public:
         GHDResult result;
         result.bags = solution;
         result.weight = best;
+        result.join_tree = hypergraph::recover_join_tree(solution, n);
         return result;
     }
 

@@ -16,6 +16,11 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
+    if (argc < 10) {
+        cerr << "Usage: bowtie_fast <R> <S> <T> <RP> <SP> <TP> <mode1> <mode2> <output> <dummy>" << endl;
+        return 1;
+    }
+
     // Setup de GHD: leer qdags que forman nodos
     qdag::att_set att_R;
     qdag::att_set att_S;
@@ -83,6 +88,7 @@ int main(int argc, char** argv)
     auto rels = { rel_R, rel_S, rel_T, rel_RP, rel_SP, rel_TP };
     cout << "read all relations, with a total of " << relations_size(rels) << " tuples" << endl;
 
+    // one qdag for each edge in this case
     vector<qdag> qdags(6);
     qdags[0] = qdag_rel_R;
     qdags[1] = qdag_rel_S;
@@ -103,11 +109,8 @@ int main(int argc, char** argv)
     Q_c[2] = qdag_rel_TP;
 
     // Crear GHDs
-    vector<ghd> empty_children(0);
-    ghd sub_c = ghd(Q_c, empty_children);
-    vector<ghd> level_1;
-    level_1.push_back(sub_c);
-    root = ghd(Q_root, level_1);
+    root = ghd();
+    root = root.get_optimal_ghd(number_of_nodes, number_of_edges, edges, qdags);
 
     run_experiment(argv, argc, rels, qdags, root);
     return 0;
