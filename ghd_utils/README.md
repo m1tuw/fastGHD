@@ -5,7 +5,7 @@ This directory contains utility programs for testing and brute-force tree decomp
 ## Prerequisites
 
 You need:
-- **g++** (C++17 compatible)
+- **gcc** (C++17 compatible, used as the C++ driver)
 - Either **mingw32-make** or **PowerShell** for building
 
 ## Compilation Options
@@ -80,6 +80,9 @@ Use the PowerShell script instead:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build.ps1 all
 ```
+
+### "gcc: command not found"
+Install MSYS2/MinGW and ensure `gcc.exe` is on your `PATH`.
 
 ### Compilation errors about missing headers
 Ensure all header files are in `../includes/` directory.

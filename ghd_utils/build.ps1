@@ -7,8 +7,9 @@ param(
     [string]$Target = "all"
 )
 
-$CXX = "g++"
+$CXX = "gcc"
 $CXXFLAGS = @("-std=c++17", "-Wall", "-Wextra", "-I../includes", "-g", "-O3")
+$LDLIBS = @("-lstdc++")
 
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 Push-Location $scriptPath
@@ -45,7 +46,7 @@ function Build-Target {
 
     $compileCmd = @($CXX) + $CXXFLAGS + $sources + @("-o", $exe)
 
-    & $CXX @CXXFLAGS @sources -o $exe
+    & $CXX @CXXFLAGS @sources -o $exe @LDLIBS
 
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✓ $exe built successfully" -ForegroundColor Green

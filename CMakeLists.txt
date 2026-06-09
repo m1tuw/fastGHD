@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
+set(CMAKE_CXX_COMPILER g++ CACHE STRING "C++ compiler" FORCE)
 project(ccq_qdags)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -44,11 +45,17 @@ target_link_libraries(t4_ghd ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/extern
 
 add_executable(bowtie queries/bowtie.cpp
         queries/bowtie_fast.cpp
-        src/joins.cpp)
+        src/joins.cpp
+        includes/ghd_solver.hpp)
 
 target_link_libraries(bowtie ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/lib/libsdsl.a)
 target_link_libraries(bowtie ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/external/libdivsufsort/lib/libdivsufsort.a)
 target_link_libraries(bowtie ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/external/libdivsufsort/lib/libdivsufsort64.a)
+
+add_executable(tree_decomp_brute
+        src/tree_decomp_brute/tree_decomp_brute.cpp
+        src/hypergraphs/hypertree_check.cpp
+        src/fractional_edge_cover/fractional_edge_cover_solver.cpp)
 
 add_executable(t3_ghd queries/t3_ghd.cpp)
 
