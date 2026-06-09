@@ -46,7 +46,9 @@ target_link_libraries(t4_ghd ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/extern
 add_executable(bowtie queries/bowtie.cpp
         src/joins.cpp
         includes/ghd_solver.hpp
-        includes/sys/resource.h)
+        includes/sys/resource.h
+        queries/square_barbell.cpp
+        queries/square_barbell_fast.cpp)
 
 target_link_libraries(bowtie ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/lib/libsdsl.a)
 target_link_libraries(bowtie ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/external/libdivsufsort/lib/libdivsufsort.a)
