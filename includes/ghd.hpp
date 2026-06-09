@@ -8,7 +8,8 @@
 #include <inttypes.h>
 #include <vector>
 #include "qdags.hpp"
-#include "../src/joins.cpp"
+#include "../src/joins_old.cpp"
+#include <optional>
 
 using namespace std;
 
@@ -162,6 +163,13 @@ public:
     uint64_t n_ones()
     {
         return relations.front().n_ones();
+    }
+
+    /*
+     *  creates a GHD given a set of bags of vertices
+     */
+    ghd get_optimal_ghd(int number_of_nodes, int number_of_edges, const vector<pair<int,int>>& edges) {
+
     }
 };
 

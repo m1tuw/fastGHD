@@ -42,7 +42,9 @@ target_link_libraries(t4_ghd ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/lib/li
 target_link_libraries(t4_ghd ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/external/libdivsufsort/lib/libdivsufsort.a)
 target_link_libraries(t4_ghd ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/external/libdivsufsort/lib/libdivsufsort64.a)
 
-add_executable(bowtie queries/bowtie.cpp)
+add_executable(bowtie queries/bowtie.cpp
+        queries/bowtie_fast.cpp
+        src/joins.cpp)
 
 target_link_libraries(bowtie ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/lib/libsdsl.a)
 target_link_libraries(bowtie ${CMAKE_SOURCE_DIR}/external/sdsl-lite/build/external/libdivsufsort/lib/libdivsufsort.a)
