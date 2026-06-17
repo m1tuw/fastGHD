@@ -1,50 +1,19 @@
-./j3 ../data/prop-direct-P197 ../data/prop-direct-P800 ../data/prop-direct-P1366 
-./j3 ../data/prop-direct-P206 ../data/prop-direct-P138 ../data/prop-direct-P4839 
-./j3 ../data/prop-direct-P4132 ../data/prop-direct-P461 ../data/prop-direct-P4342 
-./j3 ../data/prop-direct-P141 ../data/prop-direct-P301 ../data/prop-direct-P4746 
-./j3 ../data/prop-direct-P1313 ../data/prop-direct-P301 ../data/prop-direct-P541 
-./j3 ../data/prop-direct-P736 ../data/prop-direct-P1040 ../data/prop-direct-P648 
-./j3 ../data/prop-direct-P750 ../data/prop-direct-P98 ../data/prop-direct-P3984 
-./j3 ../data/prop-direct-P2302 ../data/prop-direct-P1366 ../data/prop-direct-P461 
-./j3 ../data/prop-direct-P61 ../data/prop-direct-P547 ../data/prop-direct-P2435 
-./j3 ../data/prop-direct-P1855 ../data/prop-direct-P138 ../data/prop-direct-P1444 
-./j3 ../data/prop-direct-P1389 ../data/prop-direct-P747 ../data/prop-direct-P1462 
-./j3 ../data/prop-direct-P780 ../data/prop-direct-P682 ../data/prop-direct-P1056 
-./j3 ../data/prop-direct-P2293 ../data/prop-direct-P509 ../data/prop-direct-P1256 
-./j3 ../data/prop-direct-P647 ../data/prop-direct-P1923 ../data/prop-direct-P505 
-./j3 ../data/prop-direct-P3912 ../data/prop-direct-P159 ../data/prop-direct-P4854 
-./j3 ../data/prop-direct-P1687 ../data/prop-direct-P1963 ../data/prop-direct-P227 
-./j3 ../data/prop-direct-P127 ../data/prop-direct-P451 ../data/prop-direct-P428 
-./j3 ../data/prop-direct-P509 ../data/prop-direct-P1376 ../data/prop-direct-P36 
-./j3 ../data/prop-direct-P608 ../data/prop-direct-P156 ../data/prop-direct-normalized-P269 
-./j3 ../data/prop-direct-P200 ../data/prop-direct-P248 ../data/prop-direct-P1424 
-./j3 ../data/prop-direct-P398 ../data/prop-direct-P183 ../data/prop-direct-P2572 
-./j3 ../data/prop-direct-P1990 ../data/prop-direct-P101 ../data/prop-direct-P4746 
-./j3 ../data/prop-direct-P3450 ../data/prop-direct-P463 ../data/prop-direct-P1661 
-./j3 ../data/prop-direct-P344 ../data/prop-direct-P1056 ../data/prop-direct-P1552 
-./j3 ../data/prop-direct-P3602 ../data/prop-direct-P1423 ../data/prop-direct-P1308 
-./j3 ../data/prop-direct-P914 ../data/prop-direct-P155 ../data/prop-direct-P910 
-./j3 ../data/prop-direct-P669 ../data/prop-direct-P915 ../data/prop-direct-P4244 
-./j3 ../data/prop-direct-P1387 ../data/prop-direct-P461 ../data/prop-direct-P3916 
-./j3 ../data/prop-direct-P511 ../data/prop-direct-P101 ../data/prop-direct-P902 
-./j3 ../data/prop-direct-P1950 ../data/prop-direct-P460 ../data/prop-direct-P495 
-./j3 ../data/prop-direct-P2239 ../data/prop-direct-P1629 ../data/prop-direct-P1709 
-./j3 ../data/prop-direct-P206 ../data/prop-direct-P138 ../data/prop-direct-P4672 
-./j3 ../data/prop-direct-P344 ../data/prop-direct-P195 ../data/prop-direct-P535 
-./j3 ../data/prop-direct-P5280 ../data/prop-direct-P156 ../data/prop-direct-P487 
-./j3 ../data/prop-direct-P3781 ../data/prop-direct-P186 ../data/prop-direct-normalized-P508 
-./j3 ../data/prop-direct-P163 ../data/prop-direct-P1629 ../data/prop-direct-P227 
-./j3 ../data/prop-direct-P1709 ../data/prop-direct-P1366 ../data/prop-direct-P1365 
-./j3 ../data/prop-direct-P184 ../data/prop-direct-P25 ../data/prop-direct-P1615 
-./j3 ../data/prop-direct-P264 ../data/prop-direct-P725 ../data/prop-direct-P3136 
-./j3 ../data/prop-direct-P688 ../data/prop-direct-P3781 ../data/prop-direct-P1748 
-./j3 ../data/prop-direct-P655 ../data/prop-direct-P175 ../data/prop-direct-P3040 
-./j3 ../data/prop-direct-P1414 ../data/prop-direct-P553 ../data/prop-direct-P1661 
-./j3 ../data/prop-direct-P1313 ../data/prop-direct-P460 ../data/prop-direct-P935 
-./j3 ../data/prop-direct-P870 ../data/prop-direct-P828 ../data/prop-direct-P1417 
-./j3 ../data/prop-direct-P1830 ../data/prop-direct-P750 ../data/prop-direct-P166 
-./j3 ../data/prop-direct-P36 ../data/prop-direct-P301 ../data/prop-direct-P69 
-./j3 ../data/prop-direct-P3494 ../data/prop-direct-P1346 ../data/prop-direct-P2601 
-./j3 ../data/prop-direct-P1591 ../data/prop-direct-P710 ../data/prop-direct-normalized-P1015 
-./j3 ../data/prop-direct-P1347 ../data/prop-direct-P607 ../data/prop-direct-normalized-P1014 
-./j3 ../data/prop-direct-P530 ../data/prop-direct-P205 ../data/prop-direct-P2427 
+output_file="/mnt/c/Users/crist/Documents/ccqQDAGS/runqueries/outputs/trad_j3_yk_log.txt"
+params_file="/mnt/c/Users/crist/Documents/query-pattern-finder/j3.txt"
+ 
+ 
+ while IFS= read -r params; do
+     # Run the program with a timeout
+     echo "Running experiment with parameters: $params"
+     timeout 1800 ./build/j3_ghd $params
+ 
+     # Check if the program timed out
+     if [ $? -eq 124 ]; then
+         # Log the timeout message
+         printf "timeout\n" > $output_file
+     fi
+     if [ $? -eq 139 ]; then
+         # Log the segfault message
+         printf "segfault\n" > $output_file
+     fi
+ done < "$params_file"
