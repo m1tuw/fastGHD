@@ -16,6 +16,7 @@ using namespace std;
 
 int main(int argc, char** argv)
 {
+    // example usage: bowtie_fast R S T RP SP TP time yk results.csv 0
     if (argc < 10) {
         cerr << "Usage: bowtie_fast <R> <S> <T> <RP> <SP> <TP> <mode1> <mode2> <output> <dummy>" << endl;
         return 1;
