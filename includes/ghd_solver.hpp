@@ -24,7 +24,7 @@ public:
     /*
      * List of edges must be 0-indexed.
      */
-    GHDResult solve(int number_of_nodes, int number_of_edges, const std::vector<std::pair<int, int>>& edges) {
+    GHDResult solve(int number_of_nodes, int number_of_edges, const std::vector<std::pair<int, int>>& edges, const std::vector<int>& weights) {
         n = number_of_nodes;
         m = number_of_edges;
 
@@ -54,7 +54,7 @@ public:
         }
 
         prune = true;
-        backtrack(used_nodes, used_edges, used_bags, 0.0, bags, edges, -1);
+        backtrack(used_nodes, used_edges, used_bags, 0.0, bags, edges, -1, weights);
 
         if (verbose) {
             std::cout << "upper bound: " << best << '\n';
@@ -107,13 +107,18 @@ private:
         });
     }
 
+    /*
+    weights[i] = weight of edges[i] i know this is horrible but i wanted to get results quickly
+    so for all future researchers looking at my code im not sorry
+    */
     void backtrack(std::vector<bool>& used_nodes,
                    std::vector<bool>& used_edges,
                    std::vector<bool>& used_bags,
                    double current_weight,
                    std::vector<std::vector<int>>& bags,
                    const std::vector<std::pair<int, int>>& edges,
-                   int last) {
+                   int last,
+                    std::vector<int>& weights) {
         int cntn = 0;
         int cntm = 0;
 
@@ -187,7 +192,9 @@ private:
                 continue;
             }
 
+            // join on size d bag on qdags: 2^d
             double bag_cost = pow(2.0, d);
+            // placeholder for relation sizes
             const double M = 10.0;
             if (!ready[mask]) {
                 solver::FractionalEdgeCoverSolver fecs;

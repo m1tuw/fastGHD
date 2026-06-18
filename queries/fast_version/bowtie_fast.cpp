@@ -14,6 +14,8 @@ using namespace std;
 #define AT_YP 3
 #define AT_ZP 4
 
+
+// TODO: ADD SUPPORT FOR EDGE WEIGHTS
 int main(int argc, char** argv)
 {
     // example usage: bowtie_fast R S T RP SP TP time yk results.csv 0

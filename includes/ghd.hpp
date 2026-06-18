@@ -172,9 +172,9 @@ public:
         return relations.front().n_ones();
     }
 
-    ghd get_optimal_ghd(int number_of_nodes, int number_of_edges, const vector<pair<int,int>>& edges, vector<qdag> qdags) {
+    ghd get_optimal_ghd(int number_of_nodes, int number_of_edges, const vector<pair<int,int>>& edges, vector<qdag> qdags, const vector<int>& weights) {
         GHDSolver solver;
-        GHDSolver::GHDResult res = solver.solve(number_of_nodes, number_of_edges, edges);
+        GHDSolver::GHDResult res = solver.solve(number_of_nodes, number_of_edges, edges, weights);
         const vector<vector<int>>& bags = res.bags;
         const vector<vector<int>>& join_tree = res.join_tree;
 

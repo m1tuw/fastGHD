@@ -165,6 +165,9 @@ int main(int argc, char **argv) {
     qdags[7] = qdag_rel_T;
     qdags[8] = qdag_rel_U;
 
+    vector<int> weights;
+    
+
     /*
      * Ya no hardcodeamos:
      *
