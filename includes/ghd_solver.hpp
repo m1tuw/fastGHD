@@ -56,6 +56,15 @@ public:
         prune = true;
         backtrack(used_nodes, used_edges, used_bags, 0.0, bags, edges, -1, weights);
 
+        // THIS IS FOR TESTING PURPOSES, COMMENT IF UR NOT TESTING!!!
+        /*
+        GHDResult result;
+        result.bags = solution;
+        result.weight = best;
+        result.join_tree = hypergraph::recover_join_tree(solution, n);
+        return result;
+        */
+
         if (verbose) {
             std::cout << "upper bound: " << best << '\n';
         }
@@ -197,7 +206,7 @@ private:
             }
 
             // join on size d bag on qdags: 2^d
-            double bag_cost = pow(2.0, d);
+            double bag_cost = pow(100, d);
             // placeholder for relation sizes
             const double M = 1;
             // take the product of rel_size^matching_on_that_edge

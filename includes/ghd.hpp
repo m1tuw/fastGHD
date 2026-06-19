@@ -178,6 +178,7 @@ public:
         const vector<vector<int>>& bags = res.bags;
         const vector<vector<int>>& join_tree = res.join_tree;
 
+        /*
         std::cout << "bags: " << '\n';
         for(auto bag: bags){
             for(auto v: bag){
@@ -186,7 +187,8 @@ public:
             cout << '\n';
         }
         cout << '\n';
-        
+        */
+
         int B = (int)bags.size();
 
         if (B == 0) {
@@ -197,6 +199,7 @@ public:
             throw std::runtime_error("join_tree size does not match number of bags");
         }
 
+        /*
         cout << "join_tree:" << '\n';
         for (int u = 0; u < B; u++) {
             cout << "  bag " << u << " -> ";
@@ -212,6 +215,7 @@ public:
             cout << '\n';
         }
         cout << '\n';
+        */
 
         /*
          * Precompute bag membership.

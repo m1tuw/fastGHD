@@ -28,41 +28,47 @@ COMMON_SRC=(
 
 mkdir -p bin results
 
-echo "Compiling square_barbell_fast..."
-"$CXX" queries/fast_version/square_barbell_fast.cpp "${COMMON_SRC[@]}" \
+echo "Compiling t3_ghd_fast..."
+"$CXX" queries/fast_version/t3_ghd_fast.cpp "${COMMON_SRC[@]}" \
   "${CXXFLAGS[@]}" "${LDFLAGS[@]}" \
-  -o bin/square_barbell_fast \
+  -o bin/t3_ghd_fast \
   "${LDLIBS[@]}"
 
-echo "Compiling square_barbell..."
-"$CXX" queries/square_barbell.cpp "${COMMON_SRC[@]}" \
+echo "Compiling t3_ghd..."
+"$CXX" queries/t3_ghd.cpp "${COMMON_SRC[@]}" \
   "${CXXFLAGS[@]}" "${LDFLAGS[@]}" \
-  -o bin/square_barbell \
+  -o bin/t3_ghd \
   "${LDLIBS[@]}"
 
-FAST_OUT="results/square_barbell_fast.csv"
-NORMAL_OUT="results/square_barbell.csv"
-SPEEDUP_OUT="results/square_barbell_speedups.csv"
+FAST_OUT="results/t3_ghd_fast.csv"
+NORMAL_OUT="results/t3_ghd.csv"
+SPEEDUP_OUT="results/t3_ghd_speedups.csv"
 
 : > "$FAST_OUT"
 : > "$NORMAL_OUT"
+: > "$SPEEDUP_OUT"
 
-echo "Running datasets from patterns/square_barbell.txt..."
+echo "Running datasets from patterns/t3_ghd.txt..."
 
 line_id=0
 
-while read -r A B C D J R S T U; do
-  [[ -z "${A:-}" ]] && continue
-  [[ "${A:0:1}" == "#" ]] && continue
+while read -r R S T REST; do
+  [[ -z "${R:-}" ]] && continue
+  [[ "${R:0:1}" == "#" ]] && continue
+
+  if [[ -z "${S:-}" || -z "${T:-}" ]]; then
+    echo "Skipping malformed line: expected at least 3 relation paths"
+    continue
+  fi
 
   line_id=$((line_id + 1))
 
   echo "processing dataset #$line_id"
 
-  ./bin/square_barbell "$A" "$B" "$C" "$D" "$J" "$R" "$S" "$T" "$U" time yk "$NORMAL_OUT" 0
-  ./bin/square_barbell_fast "$A" "$B" "$C" "$D" "$J" "$R" "$S" "$T" "$U" time yk "$FAST_OUT" 0
+  ./bin/t3_ghd_fast "$R" "$S" "$T" time yk "$FAST_OUT" 0
+  ./bin/t3_ghd      "$R" "$S" "$T" time yk "$NORMAL_OUT" 1
 
-done < patterns/square_barbell.txt
+done < patterns/t3_ghd.txt
 
 echo
 echo "Computing speedups..."

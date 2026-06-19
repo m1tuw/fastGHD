@@ -127,17 +127,13 @@ int main(int argc, char **argv) {
     qdags[4] = qdag_rel_T;
     qdags[5] = qdag_rel_U;
 
-    /*
-     * Antes estaba hardcodeado como:
-     *
-     *      {P,Q,R,S}
-     *          |
-     *        {T,U}
-     *
-     * Ahora se calcula automáticamente usando GHDSolver.
-     */
+    vector<int> weights;
+    for(auto r: rels){
+        weights.push_back(r->size());
+    }
+
     ghd root;
-    root = root.get_optimal_ghd(number_of_nodes, number_of_edges, edges, qdags);
+    root = root.get_optimal_ghd(number_of_nodes, number_of_edges, edges, qdags, weights);
 
     run_experiment(argv, argc, rels, qdags, root);
 

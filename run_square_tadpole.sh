@@ -28,26 +28,26 @@ COMMON_SRC=(
 
 mkdir -p bin results
 
-echo "Compiling square_barbell_fast..."
-"$CXX" queries/fast_version/square_barbell_fast.cpp "${COMMON_SRC[@]}" \
+echo "Compiling square_tadpole_fast..."
+"$CXX" queries/fast_version/square_tadpole_fast.cpp "${COMMON_SRC[@]}" \
   "${CXXFLAGS[@]}" "${LDFLAGS[@]}" \
-  -o bin/square_barbell_fast \
+  -o bin/square_tadpole_fast \
   "${LDLIBS[@]}"
 
-echo "Compiling square_barbell..."
-"$CXX" queries/square_barbell.cpp "${COMMON_SRC[@]}" \
+echo "Compiling square_tadpole..."
+"$CXX" queries/square_tadpole.cpp "${COMMON_SRC[@]}" \
   "${CXXFLAGS[@]}" "${LDFLAGS[@]}" \
-  -o bin/square_barbell \
+  -o bin/square_tadpole \
   "${LDLIBS[@]}"
 
-FAST_OUT="results/square_barbell_fast.csv"
-NORMAL_OUT="results/square_barbell.csv"
-SPEEDUP_OUT="results/square_barbell_speedups.csv"
+FAST_OUT="results/square_tadpole_fast.csv"
+NORMAL_OUT="results/square_tadpole.csv"
+SPEEDUP_OUT="results/square_tadpole_speedups.csv"
 
 : > "$FAST_OUT"
 : > "$NORMAL_OUT"
 
-echo "Running datasets from patterns/square_barbell.txt..."
+echo "Running datasets from patterns/square_tadpole.txt..."
 
 line_id=0
 
@@ -59,10 +59,10 @@ while read -r A B C D J R S T U; do
 
   echo "processing dataset #$line_id"
 
-  ./bin/square_barbell "$A" "$B" "$C" "$D" "$J" "$R" "$S" "$T" "$U" time yk "$NORMAL_OUT" 0
-  ./bin/square_barbell_fast "$A" "$B" "$C" "$D" "$J" "$R" "$S" "$T" "$U" time yk "$FAST_OUT" 0
+  ./bin/square_tadpole_fast "$A" "$B" "$C" "$D" "$J" "$R" "$S" "$T" "$U" time yk "$FAST_OUT" 0
+  ./bin/square_tadpole "$A" "$B" "$C" "$D" "$J" "$R" "$S" "$T" "$U" time yk "$NORMAL_OUT" 0
 
-done < patterns/square_barbell.txt
+done < patterns/square_tadpole.txt
 
 echo
 echo "Computing speedups..."

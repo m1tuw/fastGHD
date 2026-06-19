@@ -174,6 +174,7 @@ int main(int argc, char **argv) {
         "A", "B", "C", "D", "J", "R", "S", "T", "U"
     };
 
+    /*
     cout << "edge weights:" << endl;
     for (int i = 0; i < number_of_edges; i++) {
         cout << "  qdags[" << i << "] = "
@@ -183,6 +184,7 @@ int main(int argc, char **argv) {
              << weights[i]
              << endl;
     }
+    */
     
     ghd root;
     root = root.get_optimal_ghd(number_of_nodes, number_of_edges, edges, qdags, weights);
