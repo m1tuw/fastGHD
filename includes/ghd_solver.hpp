@@ -66,12 +66,14 @@ public:
         }
 
         best_last_opt = 0;
-        backtrack(used_nodes, used_edges, used_bags, 0.0, bags, edges, best_last_opt - 1);
+        backtrack(used_nodes, used_edges, used_bags, 0.0, bags, edges, best_last_opt - 1, weights);
 
         GHDResult result;
         result.bags = solution;
         result.weight = best;
         result.join_tree = hypergraph::recover_join_tree(solution, n);
+
+        //std::cout << "result.weight: " << result.weight << '\n';
         return result;
     }
 
@@ -118,7 +120,7 @@ private:
                    std::vector<std::vector<int>>& bags,
                    const std::vector<std::pair<int, int>>& edges,
                    int last,
-                    std::vector<int>& weights) {
+                   const std::vector<int>& weights) {
         int cntn = 0;
         int cntm = 0;
 
@@ -157,6 +159,7 @@ private:
             std::vector<int> removed_subsets;
             std::vector<int> added_edges;
             std::vector<solver::Edge> induced_subgraph;
+            std::vector<int> induced_subgraph_weights; // element i corresponds to weight of induced_subgraph[i]
             std::vector<int> isolated(n, 1);
 
             for (int i = 0; i < m; ++i) {
@@ -171,8 +174,9 @@ private:
                     solver::Edge e{};
                     e.u = u;
                     e.v = v;
-                    e.w = 1;
+                    e.w = log2(weights[i]); // optimizing sum of x_i log(N_i)
                     induced_subgraph.push_back(e);
+                    induced_subgraph_weights.push_back(weights[i]);
                 }
             }
 
@@ -195,15 +199,20 @@ private:
             // join on size d bag on qdags: 2^d
             double bag_cost = pow(2.0, d);
             // placeholder for relation sizes
-            const double M = 10.0;
+            const double M = 1;
+            // take the product of rel_size^matching_on_that_edge
             if (!ready[mask]) {
                 solver::FractionalEdgeCoverSolver fecs;
                 solver::Result res = fecs.solve(induced_subgraph, n);
-                fec_precalc[mask] = res.objective_value;
+                for(int i = 0; i < res.solution.size(); i++){
+                    bag_cost *= pow(induced_subgraph_weights[i], res.solution[i]);
+                }
+                // complexity of solving a query over this bag (the set of edges is fixed)
+                fec_precalc[mask] = bag_cost;
                 ready[mask] = 1;
-                bag_cost *= pow(M, res.objective_value);
+                
             } else {
-                bag_cost *= pow(M, fec_precalc[mask]);
+                bag_cost = fec_precalc[mask];
             }
 
             if (current_weight + bag_cost >= best) {
@@ -238,10 +247,10 @@ private:
             bags.push_back(new_bag);
             if (prune) {
                 if (hypergraph::is_hypertree(bags, n)) {
-                    backtrack(used_nodes, used_edges, used_bags, current_weight + bag_cost, bags, edges, mm);
+                    backtrack(used_nodes, used_edges, used_bags, current_weight + bag_cost, bags, edges, mm, weights);
                 }
             } else {
-                backtrack(used_nodes, used_edges, used_bags, current_weight + bag_cost, bags, edges, mm);
+                backtrack(used_nodes, used_edges, used_bags, current_weight + bag_cost, bags, edges, mm, weights);
             }
             bags.pop_back();
 
