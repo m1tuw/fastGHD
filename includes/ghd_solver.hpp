@@ -16,6 +16,7 @@ public:
     struct GHDResult {
         std::vector<std::vector<int>> bags;
         std::vector<std::vector<int>> join_tree;
+        int join_tree_root;
         double weight;
     };
 
@@ -80,7 +81,10 @@ public:
         GHDResult result;
         result.bags = solution;
         result.weight = best;
-        result.join_tree = hypergraph::recover_join_tree(solution, n);
+        auto xd = hypergraph::recover_join_tree(solution, n);
+
+        result.join_tree = xd.second;
+        result.join_tree_root = xd.first;
 
         //std::cout << "result.weight: " << result.weight << '\n';
         return result;
@@ -117,15 +121,11 @@ private:
             return popcount_int(a) > popcount_int(b);
         });
     }
-<<<<<<< feature_GHD
-    // TODO: add weights
-=======
 
     /*
     weights[i] = weight of edges[i] i know this is horrible but i wanted to get results quickly
     so for all future researchers looking at my code im not sorry
     */
->>>>>>> main
     void backtrack(std::vector<bool>& used_nodes,
                    std::vector<bool>& used_edges,
                    std::vector<bool>& used_bags,

@@ -154,6 +154,24 @@ uint64_t qdags_size(vector<qdag> qdags)
     return size;
 }
 
+/*
+    returns cardinality of query result
+*/
+uint64_t result_cardinality(qdag* result)
+{
+    if (result == nullptr) {
+        throw std::runtime_error("query result is null");
+    }
+
+    int h = result->getHeight();
+
+    if (h <= 0) {
+        return 0;
+    }
+
+    return result->Q->bv[h - 1].n_ones();
+}
+
 void run_experiment(char** argv, int argc, vector<vector<vector<uint64_t>>*> rels, vector<qdag> qdags, ghd root)
 {
     ofstream outfile(argv[argc - 2], ios::app);
@@ -187,6 +205,7 @@ void run_experiment(char** argv, int argc, vector<vector<vector<uint64_t>>*> rel
             yan_res = yannakakis_par(root);
             stop = high_resolution_clock::now();
         }
+        cout << "result size: " << yan_res->Q->bv[yan_res->getHeight()-1].n_ones() << endl; 
         if (strcmp(argv[argc - 4], "space") == 0) {
         outfile << yan_res->Q->bv[yan_res->getHeight()-1].n_ones();
     }

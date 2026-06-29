@@ -147,16 +147,21 @@ bool is_hypertree(const std::vector<std::vector<int>>& bags, int n) {
 
 /*
  *  Given a set of bags that admit a join tree, construct one such join tree.
- *  output format: list of children of each node
+ *  output format: {root, list of children of each node}
  *
  */
-std::vector<std::vector<int>> recover_join_tree(const std::vector<std::vector<int>>& bags, int n) {
+std::pair<int, std::vector<std::vector<int>>> recover_join_tree(const std::vector<std::vector<int>>& bags, int n) {
 int B = (int)bags.size();
-
+    // can be centroid or zero, default is zero
+    std::string mode = "zero";
     std::vector<std::vector<int>> children(B);
 
-    if (B <= 1) {
-        return children;
+    if (B == 0) {
+        return {-1, children};
+    }
+
+    if (B == 1) {
+        return {0, children};
     }
 
     struct DSU {
@@ -237,92 +242,115 @@ int B = (int)bags.size();
         }
     }
 
+    // centroid version
     // Orient the tree from root 0.
-        /*
+    /*
      * Find a centroid of the undirected join tree.
      *
      * A centroid is a node c such that, after removing c,
      * every connected component has size at most B / 2.
      */
-    std::vector<int> parent(B, -1);
-    std::vector<int> order;
-    order.reserve(B);
+    
+    if(mode == "centroid"){
+        std::vector<int> parent(B, -1);
+        std::vector<int> order;
+        order.reserve(B);
 
-    std::queue<int> q;
-    parent[0] = 0;
-    q.push(0);
+        std::queue<int> q;
+        parent[0] = 0;
+        q.push(0);
 
-    while (!q.empty()) {
-        int u = q.front();
-        q.pop();
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
 
-        order.push_back(u);
+            order.push_back(u);
 
-        for (int v : undirected_tree[u]) {
-            if (parent[v] != -1) continue;
+            for (int v : undirected_tree[u]) {
+                if (parent[v] != -1) continue;
 
-            parent[v] = u;
-            q.push(v);
-        }
-    }
-
-    if ((int)order.size() != B) {
-        std::cout << "recorver_join_tree produced disconnected tree" << '\n';
-    }
-
-    std::vector<int> subtree_size(B, 1);
-
-    for (int i = B - 1; i >= 0; i--) {
-        int u = order[i];
-
-        for (int v : undirected_tree[u]) {
-            if (parent[v] == u) {
-                subtree_size[u] += subtree_size[v];
-            }
-        }
-    }
-
-    int centroid = 0;
-    int best_max_component = B + 1;
-
-    for (int u = 0; u < B; u++) {
-        int max_component = B - subtree_size[u];
-
-        for (int v : undirected_tree[u]) {
-            if (parent[v] == u) {
-                max_component = std::max(max_component, subtree_size[v]);
+                parent[v] = u;
+                q.push(v);
             }
         }
 
-        if (max_component < best_max_component) {
-            best_max_component = max_component;
-            centroid = u;
+        if ((int)order.size() != B) {
+            std::cout << "recorver_join_tree produced disconnected tree" << '\n';
         }
-    }
 
-    /*
-     * Orient the tree from the centroid.
-     */
-    children.assign(B, std::vector<int>());
+        std::vector<int> subtree_size(B, 1);
 
-    std::fill(parent.begin(), parent.end(), -1);
+        for (int i = B - 1; i >= 0; i--) {
+            int u = order[i];
 
-    parent[centroid] = centroid;
-    q.push(centroid);
-
-    while (!q.empty()) {
-        int u = q.front();
-        q.pop();
-
-        for (int v : undirected_tree[u]) {
-            if (parent[v] != -1) continue;
-
-            parent[v] = u;
-            children[u].push_back(v);
-            q.push(v);
+            for (int v : undirected_tree[u]) {
+                if (parent[v] == u) {
+                    subtree_size[u] += subtree_size[v];
+                }
+            }
         }
-    }
 
-    return children;
+        int centroid = 0;
+        int best_max_component = B + 1;
+
+        for (int u = 0; u < B; u++) {
+            int max_component = B - subtree_size[u];
+
+            for (int v : undirected_tree[u]) {
+                if (parent[v] == u) {
+                    max_component = std::max(max_component, subtree_size[v]);
+                }
+            }
+
+            if (max_component < best_max_component) {
+                best_max_component = max_component;
+                centroid = u;
+            }
+        }
+
+        children.assign(B, std::vector<int>());
+
+        std::fill(parent.begin(), parent.end(), -1);
+
+        parent[centroid] = centroid;
+        q.push(centroid);
+
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+
+            for (int v : undirected_tree[u]) {
+                if (parent[v] != -1) continue;
+
+                parent[v] = u;
+                children[u].push_back(v);
+                q.push(v);
+            }
+        }
+
+        return {centroid, children}; 
+    }
+    else{ // default rooting mode 
+        std::vector<int> parent(B, -1);
+        std::queue<int> q;
+
+        parent[0] = 0;
+        q.push(0);
+
+        while (!q.empty()) {
+            int u = q.front();
+            q.pop();
+
+            for (int v : undirected_tree[u]) {
+                if (parent[v] != -1) continue;
+
+                parent[v] = u;
+                children[u].push_back(v);
+                q.push(v);
+            }
+        }
+
+        return {0, children}; 
+    }
 }
 } // namespace hypergraph

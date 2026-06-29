@@ -177,7 +177,7 @@ public:
         GHDSolver::GHDResult res = solver.solve(number_of_nodes, number_of_edges, edges, weights);
         const vector<vector<int>>& bags = res.bags;
         const vector<vector<int>>& join_tree = res.join_tree;
-
+        int join_tree_root = res.join_tree_root;
         /*
         std::cout << "bags: " << '\n';
         for(auto bag: bags){
@@ -335,7 +335,7 @@ public:
             return ghd(node_qdags, subtrees);
         };
 
-        return build(0);
+        return build(join_tree_root);
     }
 };
 

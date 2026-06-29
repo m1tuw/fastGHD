@@ -59,8 +59,11 @@ while read -r A B C D J R S T U; do
 
   echo "processing dataset #$line_id"
 
-  ./bin/square_barbell "$A" "$B" "$C" "$D" "$J" "$R" "$S" "$T" "$U" time yk "$NORMAL_OUT" 0
+  echo "======= fastghd: ======="
   ./bin/square_barbell_fast "$A" "$B" "$C" "$D" "$J" "$R" "$S" "$T" "$U" time yk "$FAST_OUT" 0
+  echo "======= hardcoded: ======="
+  ./bin/square_barbell "$A" "$B" "$C" "$D" "$J" "$R" "$S" "$T" "$U" time yk "$NORMAL_OUT" 0
+  echo ""
 
 done < patterns/square_barbell.txt
 
