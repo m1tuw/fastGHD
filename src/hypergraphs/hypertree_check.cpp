@@ -4,6 +4,7 @@
 #include <numeric>
 #include <queue>
 #include <vector>
+#include <iostream>
 
 namespace hypergraph {
 
@@ -237,11 +238,77 @@ int B = (int)bags.size();
     }
 
     // Orient the tree from root 0.
+        /*
+     * Find a centroid of the undirected join tree.
+     *
+     * A centroid is a node c such that, after removing c,
+     * every connected component has size at most B / 2.
+     */
     std::vector<int> parent(B, -1);
-    std::queue<int> q;
+    std::vector<int> order;
+    order.reserve(B);
 
+    std::queue<int> q;
     parent[0] = 0;
     q.push(0);
+
+    while (!q.empty()) {
+        int u = q.front();
+        q.pop();
+
+        order.push_back(u);
+
+        for (int v : undirected_tree[u]) {
+            if (parent[v] != -1) continue;
+
+            parent[v] = u;
+            q.push(v);
+        }
+    }
+
+    if ((int)order.size() != B) {
+        std::cout << "recorver_join_tree produced disconnected tree" << '\n';
+    }
+
+    std::vector<int> subtree_size(B, 1);
+
+    for (int i = B - 1; i >= 0; i--) {
+        int u = order[i];
+
+        for (int v : undirected_tree[u]) {
+            if (parent[v] == u) {
+                subtree_size[u] += subtree_size[v];
+            }
+        }
+    }
+
+    int centroid = 0;
+    int best_max_component = B + 1;
+
+    for (int u = 0; u < B; u++) {
+        int max_component = B - subtree_size[u];
+
+        for (int v : undirected_tree[u]) {
+            if (parent[v] == u) {
+                max_component = std::max(max_component, subtree_size[v]);
+            }
+        }
+
+        if (max_component < best_max_component) {
+            best_max_component = max_component;
+            centroid = u;
+        }
+    }
+
+    /*
+     * Orient the tree from the centroid.
+     */
+    children.assign(B, std::vector<int>());
+
+    std::fill(parent.begin(), parent.end(), -1);
+
+    parent[centroid] = centroid;
+    q.push(centroid);
 
     while (!q.empty()) {
         int u = q.front();

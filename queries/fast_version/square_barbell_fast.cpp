@@ -165,17 +165,29 @@ int main(int argc, char **argv) {
     qdags[7] = qdag_rel_T;
     qdags[8] = qdag_rel_U;
 
+    vector<int> weights;
+    for(auto r: rels){
+        weights.push_back(r->size());
+    }
+
+    vector<string> edge_names = {
+        "A", "B", "C", "D", "J", "R", "S", "T", "U"
+    };
+
     /*
-     * Ya no hardcodeamos:
-     *
-     *        {J}
-     *       /   \
-     *   {A,B,C,D} {R,S,T,U}
-     *
-     * Ahora el solver calcula los bags y el join tree.
-     */
+    cout << "edge weights:" << endl;
+    for (int i = 0; i < number_of_edges; i++) {
+        cout << "  qdags[" << i << "] = "
+             << edge_names[i]
+             << "(" << edges[i].first << "," << edges[i].second << ")"
+             << " has weight "
+             << weights[i]
+             << endl;
+    }
+    */
+    
     ghd root;
-    root = root.get_optimal_ghd(number_of_nodes, number_of_edges, edges, qdags);
+    root = root.get_optimal_ghd(number_of_nodes, number_of_edges, edges, qdags, weights);
 
     run_experiment(argv, argc, rels, qdags, root);
 

@@ -172,11 +172,22 @@ public:
         return relations.front().n_ones();
     }
 
-    ghd get_optimal_ghd(int number_of_nodes, int number_of_edges, const vector<pair<int,int>>& edges, vector<qdag> qdags) {
+    ghd get_optimal_ghd(int number_of_nodes, int number_of_edges, const vector<pair<int,int>>& edges, vector<qdag> qdags, const vector<int>& weights) {
         GHDSolver solver;
-        GHDSolver::GHDResult res = solver.solve(number_of_nodes, number_of_edges, edges);
+        GHDSolver::GHDResult res = solver.solve(number_of_nodes, number_of_edges, edges, weights);
         const vector<vector<int>>& bags = res.bags;
         const vector<vector<int>>& join_tree = res.join_tree;
+
+        /*
+        std::cout << "bags: " << '\n';
+        for(auto bag: bags){
+            for(auto v: bag){
+                cout << v << " ";
+            }
+            cout << '\n';
+        }
+        cout << '\n';
+        */
 
         int B = (int)bags.size();
 
@@ -187,6 +198,24 @@ public:
         if ((int)join_tree.size() != B) {
             throw std::runtime_error("join_tree size does not match number of bags");
         }
+
+        /*
+        cout << "join_tree:" << '\n';
+        for (int u = 0; u < B; u++) {
+            cout << "  bag " << u << " -> ";
+
+            if (join_tree[u].empty()) {
+                cout << "(leaf)";
+            } else {
+                for (int v : join_tree[u]) {
+                    cout << v << " ";
+                }
+            }
+
+            cout << '\n';
+        }
+        cout << '\n';
+        */
 
         /*
          * Precompute bag membership.
