@@ -117,11 +117,15 @@ private:
             return popcount_int(a) > popcount_int(b);
         });
     }
+<<<<<<< feature_GHD
+    // TODO: add weights
+=======
 
     /*
     weights[i] = weight of edges[i] i know this is horrible but i wanted to get results quickly
     so for all future researchers looking at my code im not sorry
     */
+>>>>>>> main
     void backtrack(std::vector<bool>& used_nodes,
                    std::vector<bool>& used_edges,
                    std::vector<bool>& used_bags,
