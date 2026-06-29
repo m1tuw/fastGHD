@@ -55,6 +55,16 @@ public:
 
     rank_bv_64(vector<uint64_t> _bv, int kd)
     {
+        // fix: segfault when query yields 0 results
+        if(_bv.empty()){
+            u = 0;
+            n = 0;
+
+            seq = new uint64_t[1]();
+            block = new uint32_t[1]();
+
+            return;
+        }
         //cout<< "esto llega a rank " << _bv << endl;
         u = _bv[_bv.size() - 1] + 1; //last element
         n = _bv.size(); // each element  is a position with a 1

@@ -1,0 +1,6 @@
+query_file,mode,atoms,variables,time_seconds,cardinality
+sample_query.txt,yk,9,8,1.462986836,27
+queries_new/sample_query.txt,mj,9,8,18.966217298,27
+queries_new/sample_query.txt,yk,9,8,1.428364935,27
+queries_new/path_1.txt,yk,4,5,0.193140447,0
+queries_new/s4.txt,mj,4,4,0.000402426,0
