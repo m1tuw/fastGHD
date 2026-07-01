@@ -572,9 +572,13 @@ static qdag* execute_query(
     BuiltQuery& built,
     const Options& opt
 ) {
+
+
     if (opt.mode == "mj") {
         return multiJoin(built.qdags, false, 1000);
     }
+
+    cout << "[yk] computing GHD..." << endl;
 
     ghd root;
 
@@ -586,10 +590,17 @@ static qdag* execute_query(
         built.weights
     );
 
-    return yannakakis(root, {});
+    cout << "[yk] GHD computed, running yannakakis..." << endl;
+
+    qdag* ans = yannakakis(root, {});
+	
+    cout << "[yk] yannakakis finished" << endl;
+
+    return ans;
 }
 
 int main(int argc, char** argv) {
+	cout << "[DEBUG] entered main" << endl;
     try {
         Options opt = parse_options(argc, argv);
 
