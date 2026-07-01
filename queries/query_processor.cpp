@@ -34,6 +34,7 @@ struct Options {
     string benchmark_file;
     string mode = "yk";
 
+    bool unit_weights = false;
     bool debug = false;
     bool dump_results = true;
 };
@@ -99,6 +100,8 @@ static Options parse_options(int argc, char** argv) {
             opt.debug = true;
         } else if (arg == "--no-dump") {
             opt.dump_results = false;
+        } else if (arg == "--unit-weights") {
+            opt.unit_weights = true;
         } else if (arg == "--help" || arg == "-h") {
             print_usage(argv[0]);
             exit(0);
@@ -301,7 +304,11 @@ static BuiltQuery build_query(const ParsedQuery& query, const Options& opt) {
         );
 
         built.edges.emplace_back(atom.subject_id, atom.object_id);
-        built.weights.push_back(relation_weight_by_predicate.at(atom.predicate));
+        if (opt.unit_weights) {
+            built.weights.push_back(1);
+        } else {
+            built.weights.push_back(relation_weight_by_predicate.at(atom.predicate));
+        }
     }
 
     return built;
