@@ -210,7 +210,7 @@ private:
             }
 
             // join on size d bag on qdags: 2^d
-            double bag_cost = pow(2, d);
+            double bag_cost = pow(100, d);
             // placeholder for relation sizes
             const double M = 1;
             // take the product of rel_size^matching_on_that_edge
