@@ -303,6 +303,8 @@ static BuiltQuery build_query(const ParsedQuery& query, const Options& opt) {
             attributes.size()
         );
 
+        cout << "[atom] "<< atom.subject_name << ' ' << atom.predicate << ' ' << atom.object_name << endl;
+
         built.edges.emplace_back(atom.subject_id, atom.object_id);
         if (opt.unit_weights) {
             built.weights.push_back(1);

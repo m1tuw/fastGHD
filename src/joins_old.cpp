@@ -1027,4 +1027,3 @@ void semiJoin(vector<qdag> &Q, bool bounded_result, uint64_t UPPER_BOUND)
         Q[0].Q->active[i].bv_and(temp[i]);
     }
 }
-
