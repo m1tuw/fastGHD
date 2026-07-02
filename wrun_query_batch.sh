@@ -7,7 +7,7 @@ MODE="yk"
 
 mkdir -p results tmp_queries
 
-BENCH_OUT="results/batch_benchmarks.csv"
+BENCH_OUT="results/batch_benchmarks_weighted.csv"
 : > "$BENCH_OUT"
 
 global_query_id=0
@@ -44,7 +44,6 @@ for QUERY_LIST in "$QUERY_DIR"/*.txt; do
       --data-dir "$DATA_DIR" \
       --mode "$MODE" \
       --no-dump \
-      --unit-weights \
       --debug \
       --bench "$BENCH_OUT"
 
