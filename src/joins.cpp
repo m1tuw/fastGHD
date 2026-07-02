@@ -843,12 +843,28 @@ qdag *parMultiJoin(vector<qdag> &Q, bool bounded_result, uint64_t UPPER_BOUND)
 */
 
 
+
 void semiJoin(vector<qdag> &Q, bool bounded_result, uint64_t UPPER_BOUND) {
     qdag::att_set A;
     map<uint64_t, uint8_t> attr_map;
 
     if (Q.size() == 1) {
         return;
+    }
+
+    // handle empty case
+    for (uint64_t i = 0; i < Q.size(); i++) {
+        if (Q[i].n_ones() == 0) {
+            if (i == 0) {
+                return;
+            }
+
+            for (int level = 0; level < Q[0].getHeight(); level++) {
+                Q[0].Q->active[level] = Q[0].Q->active[level].clone_empty();
+            }
+
+            return;
+        }
     }
 
     // computes the union of the attribute sets

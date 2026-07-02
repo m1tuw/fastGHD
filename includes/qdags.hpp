@@ -70,6 +70,7 @@ public:
         this->grid_side = _Q.grid_side;
         this->Msize = _Q.Msize;
         this->is_extended_qdag = _Q.is_extended_qdag;
+        this->M_prime = _Q.M_prime;
 
     }
 
@@ -264,7 +265,8 @@ public:
 //            time_span_rank = duration_cast<duration<double>>(stop_rank - start_rank);
 //            total_time_rank += time_span_rank.count();
 
-        uint16_t n_children, n_active;
+        // fix: uninitialized values
+        uint16_t n_children = 0, n_active = 0;
         uint64_t children_array[k_d], active_array[k_d];
 
         //start_rank = high_resolution_clock::now();
@@ -333,7 +335,7 @@ public:
         uint64_t& size_children_to_recurse,
         const uint64_t k_d)
     {
-        uint16_t n_children;
+        uint16_t n_children = 0;
         uint64_t children_array[k_d];
 
         Q->get_children(Q->getHeight() - 1, node, children_array, n_children);

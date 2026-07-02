@@ -6,3 +6,7 @@
 venv
 /build
 __pycache__/plotter.cpython-39.pyc
+wikidata
+data2
+data3
+tmp_queries

@@ -2,13 +2,9 @@
 #include <chrono>
 #include <cstdint>
 #include <fstream>
-#include <functional>
 #include <iomanip>
 #include <iostream>
-#include <map>
 #include <memory>
-#include <optional>
-#include <queue>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -22,47 +18,6 @@ using namespace std::chrono;
 #include "../includes/ghd.hpp"
 #include "../src/ghd_optimal_joins.cpp"
 
-/*
- * Generic RDF-style query processor.
- *
- * Supported query atom format:
- *
- *      ?x1 1652 ?x2 .
- *      ?x2 2043 ?x3 .
- *
- * Each atom is treated as a binary relation:
- *
- *      P1652(?x1, ?x2)
- *      P2043(?x2, ?x3)
- *
- * The predicate id is mapped to a file using:
- *
- *      <data_dir>/prop-direct-P<predicate>
- *
- * Example:
- *
- *      1652 -> data/prop-direct-P1652
- *
- * The processor can:
- *
- *      - parse an arbitrary number of atoms/triples;
- *      - build one qdag per query atom;
- *      - compute a GHD using your GHDSolver;
- *      - run yannakakis or direct multiJoin;
- *      - dump materialized result tuples sorted by variable name;
- *      - print debug cardinality;
- *      - append benchmark rows to a CSV file.
- */
-
-
-/*
- * One parsed RDF-style atom.
- *
- * subject_name and object_name are variables such as "?x1".
- * predicate is a string because filenames use the original predicate token.
- *
- * subject_id and object_id are filled after variable-id assignment.
- */
 struct QueryAtom {
     string subject_name;
     string predicate;
@@ -72,10 +27,6 @@ struct QueryAtom {
     int object_id = -1;
 };
 
-
-/*
- * Runtime options parsed from argv.
- */
 struct Options {
     string query_file;
     string data_dir = "data";
@@ -83,41 +34,24 @@ struct Options {
     string benchmark_file;
     string mode = "yk";
 
+    bool unit_weights = false;
     bool debug = false;
     bool dump_results = true;
 };
 
-
-/*
- * Full parsed query.
- *
- * var_names[id] gives the variable name for that attribute id.
- * Atoms use subject_id/object_id into var_names.
- */
 struct ParsedQuery {
     vector<QueryAtom> atoms;
     vector<string> var_names;
 };
 
-
-/*
- * The objects needed to execute a query.
- *
- * owned_relations keeps relation memory alive.
- * qdags has one qdag per atom, in exactly the same order as query.atoms.
- * edges is the logical query graph passed to the GHD solver.
- */
 struct BuiltQuery {
     vector<unique_ptr<vector<vector<uint64_t>>>> owned_relations;
     vector<qdag> qdags;
     vector<pair<int, int>> edges;
+    vector<int> weights;
     uint64_t grid_side = 1;
 };
 
-
-/*
- * Print usage and exit cleanly.
- */
 static void print_usage(const char* program_name) {
     cerr
         << "Usage:\n"
@@ -133,19 +67,12 @@ static void print_usage(const char* program_name) {
         << "  " << program_name
         << " --query queries/path.query"
         << " --data-dir data"
-        << " --output results/path.tsv"
         << " --mode yk"
+        << " --output results/path.tsv"
         << " --debug"
-        << " --bench results/bench.csv\n";
+        << " --bench results/query_benchmarks.csv\n";
 }
 
-
-/*
- * Minimal command-line parser.
- *
- * I kept this manual instead of adding a dependency, because your project
- * already has enough build dependencies from SDSL and the solver.
- */
 static Options parse_options(int argc, char** argv) {
     Options opt;
 
@@ -173,6 +100,8 @@ static Options parse_options(int argc, char** argv) {
             opt.debug = true;
         } else if (arg == "--no-dump") {
             opt.dump_results = false;
+        } else if (arg == "--unit-weights") {
+            opt.unit_weights = true;
         } else if (arg == "--help" || arg == "-h") {
             print_usage(argv[0]);
             exit(0);
@@ -192,35 +121,13 @@ static Options parse_options(int argc, char** argv) {
     return opt;
 }
 
-
-/*
- * Remove a trailing dot from a token.
- *
- * This allows both:
- *
- *      ?x1 1652 ?x2 .
- *
- * and:
- *
- *      ?x1 1652 ?x2.
- */
 static string strip_trailing_dot(string token) {
-    if (!token.empty() && token.back() == '.') {
+    while (!token.empty() && token.back() == '.') {
         token.pop_back();
     }
     return token;
 }
 
-
-/*
- * Tokenize a query file.
- *
- * We remove standalone "." tokens because triples are parsed as groups of 3:
- *
- *      subject predicate object
- *
- * This is robust to the query being written on one line or many lines.
- */
 static vector<string> read_query_tokens(const string& filename) {
     ifstream in(filename);
 
@@ -246,15 +153,6 @@ static vector<string> read_query_tokens(const string& filename) {
     return tokens;
 }
 
-
-/*
- * Parse RDF-style triples.
- *
- * The current qdag engine expects relations over variables. Therefore this
- * first version requires subject and object to be variables beginning with '?'.
- *
- * Constants can be added later by filtering relation files before building qdags.
- */
 static ParsedQuery parse_query_file(const string& filename) {
     vector<string> tokens = read_query_tokens(filename);
 
@@ -263,9 +161,7 @@ static ParsedQuery parse_query_file(const string& filename) {
     }
 
     if (tokens.size() % 3 != 0) {
-        throw runtime_error(
-            "Malformed query: expected token count to be a multiple of 3"
-        );
+        throw runtime_error("Malformed query: expected triples of the form: subject predicate object .");
     }
 
     ParsedQuery query;
@@ -273,36 +169,25 @@ static ParsedQuery parse_query_file(const string& filename) {
 
     for (size_t i = 0; i < tokens.size(); i += 3) {
         QueryAtom atom;
+
         atom.subject_name = tokens[i];
         atom.predicate = tokens[i + 1];
         atom.object_name = tokens[i + 2];
 
         if (atom.subject_name.empty() || atom.subject_name[0] != '?') {
-            throw runtime_error(
-                "Only variable subjects are supported for now: " + atom.subject_name
-            );
+            throw runtime_error("Only variable subjects are supported: " + atom.subject_name);
         }
 
         if (atom.object_name.empty() || atom.object_name[0] != '?') {
-            throw runtime_error(
-                "Only variable objects are supported for now: " + atom.object_name
-            );
+            throw runtime_error("Only variable objects are supported: " + atom.object_name);
         }
 
         variables.push_back(atom.subject_name);
         variables.push_back(atom.object_name);
+
         query.atoms.push_back(atom);
     }
 
-    /*
-     * Alphabetical variable order.
-     *
-     * This makes output columns deterministic and satisfies the requirement
-     * that results are dumped sorted alphabetically by variable name.
-     *
-     * Note: lexicographic sorting means ?x10 comes before ?x2.
-     * If you want natural numeric ordering, change this comparator.
-     */
     sort(variables.begin(), variables.end());
     variables.erase(unique(variables.begin(), variables.end()), variables.end());
 
@@ -322,16 +207,6 @@ static ParsedQuery parse_query_file(const string& filename) {
     return query;
 }
 
-
-/*
- * Build the data file path for one predicate.
- *
- * Input predicate "1652" becomes:
- *
- *      data/prop-direct-P1652
- *
- * If the user writes "P1652", we avoid generating "PP1652".
- */
 static string predicate_to_file(const string& data_dir, const string& predicate) {
     string property_name;
 
@@ -344,13 +219,6 @@ static string predicate_to_file(const string& data_dir, const string& predicate)
     return data_dir + "/prop-direct-" + property_name;
 }
 
-
-/*
- * Compute a power of two that is strictly greater than the maximum coordinate.
- *
- * The quadtree expects coordinates in [0, grid_side). If the maximum coordinate
- * is exactly a power of two, using that same value as grid_side would be wrong.
- */
 static uint64_t next_power_of_two_strict(uint64_t max_value) {
     uint64_t side = 1;
 
@@ -361,20 +229,14 @@ static uint64_t next_power_of_two_strict(uint64_t max_value) {
     return side;
 }
 
-
-/*
- * Load every distinct predicate relation once.
- *
- * Even if the same predicate appears in many atoms, the file is read once.
- */
 static unordered_map<string, vector<vector<uint64_t>>*> load_relations(
     const ParsedQuery& query,
     const Options& opt,
     vector<unique_ptr<vector<vector<uint64_t>>>>& owned_relations,
+    unordered_map<string, int>& relation_weight_by_predicate,
     uint64_t& max_value
 ) {
     unordered_map<string, vector<vector<uint64_t>>*> relation_by_predicate;
-
     max_value = 0;
 
     for (const QueryAtom& atom : query.atoms) {
@@ -389,43 +251,36 @@ static unordered_map<string, vector<vector<uint64_t>>*> load_relations(
         );
 
         if (relation->empty()) {
-            throw runtime_error(
-                "Relation file is empty or missing: " + path
-            );
+            throw runtime_error("Relation file is empty or missing: " + path);
         }
 
         max_value = maximum_in_table(*relation, 2, max_value);
 
+        int weight = (int)min<uint64_t>(
+            relation->size(),
+            (uint64_t)numeric_limits<int>::max()
+        );
+
+        relation_weight_by_predicate[atom.predicate] = max(1, weight);
         relation_by_predicate[atom.predicate] = relation.get();
+
         owned_relations.push_back(std::move(relation));
     }
 
     return relation_by_predicate;
 }
 
-
-/*
- * Build one qdag per query atom.
- *
- * This is the generic replacement for hardcoded code such as:
- *
- *      att_R = [AT_X, AT_Y]
- *      qdag_rel_R(*rel_R, att_R, ...)
- *
- * Here, every atom generates:
- *
- *      att = [subject_id, object_id]
- *      qdag(relation_for_predicate, att, ...)
- */
 static BuiltQuery build_query(const ParsedQuery& query, const Options& opt) {
     BuiltQuery built;
 
     uint64_t max_value = 0;
+    unordered_map<string, int> relation_weight_by_predicate;
 
     auto relation_by_predicate = load_relations(
         query,
         opt,
         built.owned_relations,
+        relation_weight_by_predicate,
         max_value
     );
 
@@ -449,21 +304,16 @@ static BuiltQuery build_query(const ParsedQuery& query, const Options& opt) {
         );
 
         built.edges.emplace_back(atom.subject_id, atom.object_id);
+        if (opt.unit_weights) {
+            built.weights.push_back(1);
+        } else {
+            built.weights.push_back(relation_weight_by_predicate.at(atom.predicate));
+        }
     }
 
     return built;
 }
 
-
-/*
- * Decode a child index into one digit per dimension.
- *
- * This mirrors se_quadtree::get_chunk_idx:
- *
- *      child = digit_0 * k^(d-1) + digit_1 * k^(d-2) + ... + digit_{d-1}
- *
- * For k = 2 and d = 3, child 5 = binary 101 -> [1, 0, 1].
- */
 static vector<uint64_t> decode_child_index(uint64_t child, uint8_t k, uint8_t d) {
     vector<uint64_t> digits(d, 0);
 
@@ -485,16 +335,35 @@ static vector<uint64_t> decode_child_index(uint64_t child, uint8_t k, uint8_t d)
     return digits;
 }
 
+static uint64_t read_bits_from_rank_bv(rank_bv_64& bv, uint64_t start_pos, uint64_t width) {
+    if (width == 0 || width > 64) {
+        throw runtime_error("Cannot read bit block with width > 64");
+    }
 
-/*
- * Recursively enumerate points from a qdag's underlying quadtree.
- *
- * This materializes the compressed result. Use it for correctness checks or
- * small/medium outputs, not for huge benchmark-only runs.
- *
- * The traversal uses public qdag::Q and se_quadtree::get_node/get_node_lastlevel.
- * Those are already the same primitives used by the join code.
- */
+    uint64_t word_id = start_pos >> 6;
+    uint64_t offset = start_pos & 63;
+
+    uint64_t value = bv.seq[word_id] >> offset;
+
+    if (offset + width > 64) {
+        value |= bv.seq[word_id + 1] << (64 - offset);
+    }
+
+    if (width == 64) {
+        return value;
+    }
+
+    return value & ((1ULL << width) - 1ULL);
+}
+
+static uint64_t physical_children_mask(se_quadtree* tree, uint16_t level, uint64_t node_start) {
+    return read_bits_from_rank_bv(tree->bv[level], node_start, tree->getKD());
+}
+
+static uint64_t active_children_mask(se_quadtree* tree, uint16_t level, uint64_t node_start) {
+    return read_bits_from_rank_bv(tree->active[level], node_start, tree->getKD());
+}
+
 static void enumerate_qdag_dfs(
     qdag& result,
     uint16_t level,
@@ -506,18 +375,30 @@ static void enumerate_qdag_dfs(
     se_quadtree* tree = result.Q;
 
     const uint8_t k = tree->getK();
-    const uint8_t d = result.nAttr();
+    const uint8_t d = (uint8_t)result.nAttr();
     const uint64_t kd = tree->getKD();
     const uint16_t height = tree->getHeight();
 
-    uint64_t mask = 0;
+    if (kd > 64) {
+        throw runtime_error("Result dumping only supports k^d <= 64");
+    }
+
+    uint64_t physical_mask = physical_children_mask(tree, level, node_start);
+    uint64_t active_mask = active_children_mask(tree, level, node_start);
+    uint64_t mask = physical_mask & active_mask;
+
     vector<uint64_t> rank_array(kd, 0);
 
-    if (level + 1 == height) {
-        mask = tree->get_node_lastlevel(level, node_start);
-    } else {
+    if (level + 1 < height) {
         uint64_t rank_value = tree->rank(level, node_start);
-        mask = tree->get_node(level, node_start, rank_array.data(), rank_value);
+        uint64_t acc = 1;
+
+        for (uint64_t child = 0; child < kd; ++child) {
+            if (physical_mask & (1ULL << child)) {
+                rank_array[child] = rank_value + acc;
+                ++acc;
+            }
+        }
     }
 
     for (uint64_t child = 0; child < kd; ++child) {
@@ -526,7 +407,6 @@ static void enumerate_qdag_dfs(
         }
 
         vector<uint64_t> digits = decode_child_index(child, k, d);
-
         vector<uint64_t> next_offset = offset;
 
         for (uint8_t i = 0; i < d; ++i) {
@@ -536,7 +416,12 @@ static void enumerate_qdag_dfs(
         if (level + 1 == height) {
             tuples.push_back(next_offset);
         } else {
+            if (rank_array[child] == 0) {
+                throw runtime_error("Internal qdag traversal error: missing rank for child");
+            }
+
             uint64_t child_node_start = kd * (rank_array[child] - 1);
+
             enumerate_qdag_dfs(
                 result,
                 level + 1,
@@ -549,13 +434,6 @@ static void enumerate_qdag_dfs(
     }
 }
 
-
-/*
- * Materialize all tuples from a qdag.
- *
- * The tuple order is the qdag attribute order. We later reorder columns by
- * alphabetical variable name before dumping.
- */
 static vector<vector<uint64_t>> materialize_qdag(qdag& result) {
     vector<vector<uint64_t>> tuples;
 
@@ -564,7 +442,7 @@ static vector<vector<uint64_t>> materialize_qdag(qdag& result) {
     }
 
     uint8_t k = result.getK();
-    uint16_t height = result.getHeight();
+    uint16_t height = (uint16_t)result.getHeight();
 
     uint64_t initial_cell_size = 1;
 
@@ -586,14 +464,6 @@ static vector<vector<uint64_t>> materialize_qdag(qdag& result) {
     return tuples;
 }
 
-
-/*
- * Reorder one result tuple into alphabetical variable order.
- *
- * In this processor, variable ids are assigned alphabetically, so this usually
- * matches the result qdag order already. This function still checks explicitly,
- * making the dump robust if the qdag attribute order changes later.
- */
 static vector<uint64_t> reorder_tuple_by_variable_id(
     qdag& result,
     const vector<uint64_t>& tuple,
@@ -603,19 +473,17 @@ static vector<uint64_t> reorder_tuple_by_variable_id(
 
     for (uint64_t i = 0; i < result.nAttr(); ++i) {
         int variable_id = (int)result.getAttr(i);
+
+        if (variable_id < 0 || variable_id >= variable_count) {
+            throw runtime_error("Result qdag contains an invalid attribute id");
+        }
+
         reordered[variable_id] = tuple[i];
     }
 
     return reordered;
 }
 
-
-/*
- * Dump all materialized tuples to a TSV file.
- *
- * Header columns are variable names sorted alphabetically.
- * Data rows are sorted lexicographically by tuple values.
- */
 static void dump_results_sorted(
     qdag& result,
     const ParsedQuery& query,
@@ -663,14 +531,6 @@ static void dump_results_sorted(
     }
 }
 
-
-/*
- * Append one benchmark row.
- *
- * The benchmark file is deliberately simple CSV:
- *
- *      query_file,mode,atoms,variables,time_seconds,cardinality
- */
 static void append_benchmark(
     const Options& opt,
     const ParsedQuery& query,
@@ -685,7 +545,8 @@ static void append_benchmark(
 
     {
         ifstream test(opt.benchmark_file);
-        file_already_exists = test.good() && test.peek() != ifstream::traits_type::eof();
+        file_already_exists =
+            test.good() && test.peek() != ifstream::traits_type::eof();
     }
 
     ofstream out(opt.benchmark_file, ios::app);
@@ -706,38 +567,40 @@ static void append_benchmark(
         << cardinality << '\n';
 }
 
-
-/*
- * Execute the query using the selected mode.
- *
- * mode = "mj":
- *      direct multiJoin over all atom qdags.
- *
- * mode = "yk":
- *      compute an optimal GHD using your solver, then run yannakakis.
- */
 static qdag* execute_query(
     const ParsedQuery& query,
     BuiltQuery& built,
     const Options& opt
 ) {
+
+
     if (opt.mode == "mj") {
         return multiJoin(built.qdags, false, 1000);
     }
 
+    cout << "[yk] computing GHD..." << endl;
+
     ghd root;
+
     root = root.get_optimal_ghd(
         (int)query.var_names.size(),
         (int)query.atoms.size(),
         built.edges,
-        built.qdags
+        built.qdags,
+        built.weights
     );
 
-    return yannakakis(root, {});
+    cout << "[yk] GHD computed, running yannakakis..." << endl;
+
+    qdag* ans = yannakakis(root, {});
+	
+    cout << "[yk] yannakakis finished" << endl;
+
+    return ans;
 }
 
-
 int main(int argc, char** argv) {
+	cout << "[DEBUG] entered main" << endl;
     try {
         Options opt = parse_options(argc, argv);
 
