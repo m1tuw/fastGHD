@@ -86,7 +86,7 @@ public:
         result.join_tree = xd.second;
         result.join_tree_root = xd.first;
 
-        //std::cout << "result.weight: " << result.weight << '\n';
+        std::cout << "result.weight: " << result.weight << '\n';
         return result;
     }
 
