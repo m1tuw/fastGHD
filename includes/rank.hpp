@@ -47,6 +47,14 @@ class rank_bv_64
 
     rank_bv_64(vector<uint64_t> _bv)
     {
+        // empty element fix
+        if(bv_.empty()){
+            u = 0;
+            n = 0;
+            seq = new uint64_t[1]();
+            block = new uint32_t[1]();
+            return;
+        }
         u = _bv[_bv.size() - 1] + 1; //last element
         n = _bv.size(); // each element  is a position with a 1
 

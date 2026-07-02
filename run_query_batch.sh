@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-QUERY_DIR="queries_new"
-DATA_DIR="data3"
+QUERY_DIR="sample_queries"
+DATA_DIR="data"
 MODE="yk"
 
 mkdir -p results tmp_queries
