@@ -6,25 +6,26 @@
 #include <chrono>
 #include <ctime>
 #include <omp.h>
-#include <optional>
 #include <ratio>
+#include <optional>
 
-qdag* yannakakis(ghd& root, std::optional<std::reference_wrapper<std::ofstream>> outfile)
+using namespace std::chrono;
+
+high_resolution_clock::time_point start_select, stop_select;
+double total_time_select = 0.0;
+duration<double> time_span_select;
+
+qdag* yannakakis(ghd root, std::optional<std::reference_wrapper<std::ofstream>> outfile)
 {
-    if (outfile) { // initial size
+    float init, mid, end;
     
-        outfile->get() << root.size() << ",(";
-        root.print_all_ones(outfile);
-        outfile->get() << "),";
-    }
+    init = root.size();
+    //cout << "GHD size before multijoins:" << root.size() << endl;
     // Ejecutar multijoin en todos los niveles
     root.deep_exec_multijoin();
-    if (outfile) { // mid size and results
-        outfile->get() << root.size() << ",(";
-        root.print_n_ones(outfile);
-        outfile->get() << "),";
-    }
 
+    //cout << "GHD size after multijoins:" << root.size() << endl;
+    mid = root.size();
     // Ejecutar semijoin entre root y nivel 1
     root.constrained_by_children();
 
@@ -35,14 +36,15 @@ qdag* yannakakis(ghd& root, std::optional<std::reference_wrapper<std::ofstream>>
     root.get_subtree_qdags(producto_punto);
 
     qdag* qResult = multiJoin(producto_punto, false, 1000);
-    if (outfile) { // end size
-        outfile->get() << qResult->size() << ",";
+    end = qResult->size();
+    if(outfile){
+        outfile->get() << init << "," << mid << "," << end;
     }
-
+    
     return qResult;
 }
 
-qdag* yannakakis_par(ghd& root)
+qdag* yannakakis_par(ghd root)
 {
     // Collect all nodes into a flat list
     std::vector<ghd*> node_list;
@@ -50,10 +52,11 @@ qdag* yannakakis_par(ghd& root)
 
     // Execute exec_multijoin in parallel for all nodes
     int j = 2;
-#pragma omp parallel for num_threads(j)
-    for (size_t i = 0; i < node_list.size(); ++i) {
-        node_list[i]->exec_multijoin();
-    }
+    #pragma omp parallel for num_threads(j)
+        for (size_t i = 0; i < node_list.size(); ++i) {
+            node_list[i]->exec_multijoin();
+        }
+    
 
     // solve_mj = high_resolution_clock::now();
 
@@ -185,8 +188,8 @@ void run_experiment(char** argv, int argc, vector<vector<vector<uint64_t>>*> rel
             stop = high_resolution_clock::now();
         }
         if (strcmp(argv[argc - 4], "space") == 0) {
-            outfile << yan_res->Q->bv[yan_res->getHeight()-1].n_ones();
-        }
+        outfile << yan_res->Q->bv[yan_res->getHeight()-1].n_ones();
+    }
     }
 
     const std::chrono::duration<double, std::milli> time_span = stop - start;
