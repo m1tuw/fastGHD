@@ -187,7 +187,7 @@ private:
                     solver::Edge e{};
                     e.u = u;
                     e.v = v;
-                    e.w = log2(weights[i]); // optimizing sum of x_i log(N_i)
+                    e.w = log2((double)weights[i]); // optimizing sum of x_i log(N_i)
                     induced_subgraph.push_back(e);
                     induced_subgraph_weights.push_back(weights[i]);
                 }
