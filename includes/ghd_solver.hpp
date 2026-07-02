@@ -86,33 +86,33 @@ public:
         result.join_tree = xd.second;
         result.join_tree_root = xd.first;
 
-if (true) {
-    std::cout << "\n[GHD solver] result.weight: " << result.weight << '\n';
+        if (true) {
+            std::cout << "\n[GHD solver] result.weight: " << result.weight << '\n';
 
-    std::cout << "[GHD solver] bags:\n";
-    for (int i = 0; i < (int)result.bags.size(); ++i) {
-        std::cout << "  bag " << i << " = { ";
-        for (int v : result.bags[i]) {
-            std::cout << v << " ";
-        }
-        std::cout << "}\n";
-    }
+            std::cout << "[GHD solver] bags:\n";
+            for (int i = 0; i < (int)result.bags.size(); ++i) {
+                std::cout << "  bag " << i << " = { ";
+                for (int v : result.bags[i]) {
+                    std::cout << v << " ";
+                }
+                std::cout << "}\n";
+            }
 
-    std::cout << "[GHD solver] join_tree_root: "
-              << result.join_tree_root
-              << '\n';
+            std::cout << "[GHD solver] join_tree_root: "
+                      << result.join_tree_root
+                      << '\n';
 
-    std::cout << "[GHD solver] join tree children:\n";
-    for (int i = 0; i < (int)result.join_tree.size(); ++i) {
-        std::cout << "  node " << i << " -> { ";
-        for (int child : result.join_tree[i]) {
-            std::cout << child << " ";
-        }
-        std::cout << "}\n";
-    }
+            std::cout << "[GHD solver] join tree children:\n";
+            for (int i = 0; i < (int)result.join_tree.size(); ++i) {
+                std::cout << "  node " << i << " -> { ";
+                for (int child : result.join_tree[i]) {
+                    std::cout << child << " ";
+                }
+                std::cout << "}\n";
+            }
 
-    std::cout << std::endl;
-}	
+            std::cout << std::endl;
+        }	  
 
 
         std::cout << "result.weight: " << result.weight << '\n';
