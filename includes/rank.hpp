@@ -202,7 +202,12 @@ class rank_bv_64
     }
 
     void mark_bit(uint64_t i){
+	if(i>=u){
+		std::cout << "rank mark bit out of bounds: i=" << i << " u=" << u << std::endl;
+	throw std::runtime_error("rank_bv_64::mark_bit out of bounds");
+	}
         seq[i>>6] |= 1ULL << (i % 64);
+	//n++;
     }
 };
 

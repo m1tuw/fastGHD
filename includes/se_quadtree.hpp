@@ -122,7 +122,7 @@ protected:
         active = new rank_bv_64[height];
 
         //aux array that will store the number of ones per level
-        total_ones.reserve(height);
+        total_ones.assign(height, 0);
 
         k_d = std::pow(k, d);
 
@@ -292,7 +292,7 @@ public:
         height = height > 1 ? height : 1; // If size == 0
 
         bv = new rank_bv_64[height];
-        total_ones.reserve(height);
+        total_ones.assign(height, 0);
 
         k_d = std::pow(k, d);
 

@@ -583,6 +583,7 @@ bool SemiAND(qdag **Q, uint64_t *roots, uint16_t nQ,
     {
         for (i = 0; i < nQ && children; ++i)
         {
+	
             if (nAtt == 3){
                 children &= Q[i]->materialize_node_3_lastlevel(cur_level, roots[i]);//entero representando el nodo en el qdag, al hacer and eliminamos bits de children
             }
@@ -590,6 +591,7 @@ bool SemiAND(qdag **Q, uint64_t *roots, uint16_t nQ,
                 children &= Q[i]->materialize_node_4_lastlevel(cur_level, roots[i]);
             else if (nAtt == 5)
                 children &= Q[i]->materialize_node_5_lastlevel(cur_level, roots[i]);
+
         }
         // cout << cur_level << "    " << std::bitset<32>(children).to_string()<< endl;
         children_to_recurse_size = bits::cnt((uint64_t)children); //cuantos 1 hay en children
@@ -627,10 +629,14 @@ bool SemiAND(qdag **Q, uint64_t *roots, uint16_t nQ,
             {
 
                 // obtener el bit del nodo
+		/*
                 uint64_t mask_one =1;
                 *(temp_bv[cur_level].seq) = (*(temp_bv[cur_level]).seq | (mask_one << (roots[0] + Q[0]->getM(last_pos[cur_level] % p))));
                 last_pos[cur_level]++;
-                just_zeroes = false;
+                just_zeroes = false;*/
+		temp_bv[cur_level].mark_bit(roots[0] + Q[0]->getM(child));
+		last_pos[cur_level]++;
+		just_zeroes=false;
             }
         }
 
@@ -659,13 +665,14 @@ bool SemiAND(qdag **Q, uint64_t *roots, uint16_t nQ,
         }
         //cout << cur_level << " pre pruning  " << bits::cnt((uint64_t)children) << endl;
         // Stop the descent through branches that are marked in active
+	/*
         if (nAtt == 3) {
             children &= Q[0]->materialize_active_node_3(cur_level, roots[0], temp_bv);
         } else if (nAtt == 4)
             children &= Q[0]->materialize_active_node_4(cur_level, roots[0], temp_bv);
         else if (nAtt == 5)
             children &= Q[0]->materialize_active_node_5(cur_level, roots[0], temp_bv);
-        //cout << "post pruning  " << bits::cnt((uint64_t)children) << endl;
+        //cout << "post pruning  " << bits::cnt((uint64_t)children) << endl;*/
 
         // por cuántos hijos voy a bajar, cuenta la cantitdad de 1s en un arreglo de bits/entero
         children_to_recurse_size = bits::cnt((uint64_t)children);
@@ -707,6 +714,7 @@ bool SemiAND(qdag **Q, uint64_t *roots, uint16_t nQ,
             {
                 // si se llega al último nivel o si hay resultados en el subárbol, se pone un 1 en la posición para indicar que hay resultados
                 // check if my children are marked, if they are, mark me.
+		/*
                 uint64_t temp_children = temp_bv[cur_level+1].get_bits(root_temp[0], Q[0]->Q->getKD());
                 uint64_t leftQ_children = Q[0]->Q->bv[cur_level+1].get_bits(root_temp[0], Q[0]->Q->getKD());
 
@@ -717,7 +725,10 @@ bool SemiAND(qdag **Q, uint64_t *roots, uint16_t nQ,
                 }
                 last_pos[cur_level]++;
 
-                just_zeroes = false;
+                just_zeroes = false;*/
+		temp_bv[cur_level].mark_bit(roots[0] + Q[0]->getM(child));
+		last_pos[cur_level]++;
+		just_zeroes = false;
             }
             else
             {
