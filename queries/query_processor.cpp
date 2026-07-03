@@ -188,10 +188,35 @@ static ParsedQuery parse_query_file(const string& filename) {
         query.atoms.push_back(atom);
     }
 
+    /*
     sort(variables.begin(), variables.end());
     variables.erase(unique(variables.begin(), variables.end()), variables.end());
 
     query.var_names = variables;
+    */
+
+    sort(variables.begin(), variables.end());
+    variables.erase(unique(variables.begin(), variables.end()), variables.end());
+
+    vector<string> preferred_order = {
+        "?x", "?y", "?z", "?v", "?u",
+        "?a", "?b", "?c", "?d", "?e",
+        "?f", "?g", "?h"
+    };
+
+    query.var_names.clear();
+
+    for (const string& name : preferred_order) {
+        if (find(variables.begin(), variables.end(), name) != variables.end()) {
+            query.var_names.push_back(name);
+        }
+    }
+
+    for (const string& name : variables) {
+        if (find(query.var_names.begin(), query.var_names.end(), name) == query.var_names.end()) {
+            query.var_names.push_back(name);
+        }
+    }
 
     unordered_map<string, int> id_of_variable;
 
