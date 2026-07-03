@@ -284,7 +284,7 @@ public:
         ref_count = 1;
     }
 
-    /*
+    
     se_quadtree(vector<uint64_t> _bv[], vector<uint64_t> _active[], const size_type grid_side, uint8_t _k, uint8_t _d)
     {
         k = _k;
@@ -310,8 +310,9 @@ public:
         {
             active[j] = rank_bv_64(_active[j]);
         }
-    }*/
+    }
 
+    /*
     se_quadtree(
         vector<uint64_t> _bv[],
         vector<uint64_t> _active[],
@@ -361,7 +362,7 @@ public:
         }
 
         ref_count = 1;
-    }
+    }*/
 
 
     ~se_quadtree()

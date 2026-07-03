@@ -624,14 +624,6 @@ bool SemiAND(qdag **Q, uint64_t *roots, uint16_t nQ,
 
             uint64_t target = roots[0] + Q[0]->getM(child);
 
-            cerr << "[SemiAND mark leaf] level=" << cur_level
-                 << " root=" << roots[0]
-                 << " child=" << child
-                 << " mapped=" << Q[0]->getM(child)
-                 << " target=" << target
-                 << " temp_u=" << temp_bv[cur_level].size()
-                 << endl;
-
             temp_bv[cur_level].mark_bit(target);
 
             last_pos[cur_level]++;
@@ -728,14 +720,6 @@ bool SemiAND(qdag **Q, uint64_t *roots, uint16_t nQ,
                         last_pos, nAtt, bounded_result, UPPER_BOUND, temp_bv))
             {
                 uint64_t target = roots[0] + Q[0]->getM(child);
-
-                cerr << "[SemiAND mark internal] level=" << cur_level
-                     << " root=" << roots[0]
-                     << " child=" << child
-                     << " mapped=" << Q[0]->getM(child)
-                     << " target=" << target
-                     << " temp_u=" << temp_bv[cur_level].size()
-                     << endl;
 
                 temp_bv[cur_level].mark_bit(target);
 
