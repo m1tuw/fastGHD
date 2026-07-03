@@ -577,7 +577,17 @@ static qdag* execute_query(
 
 
     if (opt.mode == "mj") {
-        return multiJoin(built.qdags, false, 1000);
+        cout << "[mj] multiJoinCount = "
+            << multiJoinCount(built.qdags)
+            << endl;
+
+        qdag* ans = multiJoin(built.qdags, false, 1000);
+
+        cout << "[mj] result->n_ones = "
+            << ans->n_ones()
+            << endl;
+
+        return ans;
     }
 
     cout << "[yk] computing GHD..." << endl;
