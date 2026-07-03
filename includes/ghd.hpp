@@ -100,9 +100,16 @@ public:
             // semijoin entre nodo y sus hijos. Debo pasarle un vector en el cual el primer elemento sea
             // mi qdag, y el resto son los qdag de children
             // esto debería alterar mi qdag
-            vector<qdag> rels = get_child_qdags();
-            rels.insert(rels.begin(), relations.front());
-            semiJoin(rels, false, 1000);
+            //vector<qdag> rels = get_child_qdags();
+            //rels.insert(rels.begin(), relations.front());
+            //semiJoin(rels, false, 1000);
+	    //
+	    for(auto child = children.begin(); child != children.end(); child++){
+		vector<qdag> cur(2);
+		cur[0] = relations.front();
+		cur[1] = child->get_relations().front();
+		semiJoin(cur, false, 1000);
+	    }
         }
     }
 

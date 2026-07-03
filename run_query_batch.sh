@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-QUERY_DIR="sample_queries"
-DATA_DIR="data"
+QUERY_DIR="queries_new"
+DATA_DIR="data3"
 MODE="yk"
 
 mkdir -p results tmp_queries
 
-BENCH_OUT="results/batch_benchmarks.csv"
+BENCH_OUT="results/batch_benchmarks_la.csv"
 : > "$BENCH_OUT"
 
 global_query_id=0
