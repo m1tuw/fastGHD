@@ -19,46 +19,23 @@ class ghd {
     vector<ghd> children;
 
 public:
+
     ghd() = default;
 
-    ghd(const std::vector<qdag>& qdags, const std::vector<ghd>& subtrees)
-        : relations(qdags)
-        , children(subtrees)
-    {
+    ghd(vector<qdag> qdags, vector<ghd> subtrees) {
+        relations = qdags;
+        children = subtrees;
     }
 
-    const std::vector<qdag>& get_relations() const
-    {
+    vector<qdag> get_relations(){
         return relations;
     }
 
-    const std::vector<ghd>& get_children() const
-    {
+    vector<ghd> get_children(){
         return children;
     }
 
-    vector<qdag> get_child_qdags() const
-    {
-        // This will be used during semijoin, so there will only be 1 qdag per vector
-        // obtengo el primer qdag que guarda cada uno de mis hijos en su nodo
-        vector<qdag> results;
-        results.reserve(children.size());
-        for (const auto& child : children) {
-            results.push_back(child.get_relations().front());
-        }
-        return results;
-    }
-
-    void get_subtree_qdags(vector<qdag>& subtree) const
-    {
-        subtree.push_back(relations.front());
-        for (const auto& child : children) {
-            child.get_subtree_qdags(subtree);
-        }
-    }
-
-    void collect_all_nodes(vector<ghd*>& subtree)
-    {
+    void collect_all_nodes(vector<ghd*> &subtree){
 
         subtree.push_back(this);
 
@@ -68,13 +45,30 @@ public:
         }
     }
 
-    void set_relations(const vector<qdag> new_relations)
-    {
+    vector<qdag> get_child_qdags(){
+        // This will be used during semijoin, so there will only be 1 qdag per vector
+        // obtengo el primer qdag que guarda cada uno de mis hijos en su nodo
+        vector<qdag> results;
+        for (auto child = children.begin(); child != children.end(); child++){
+            results.push_back(child->get_relations().front());
+        }
+        return results;
+    }
+
+    void get_subtree_qdags(vector<qdag> &subtree){
+
+        subtree.push_back(relations.front());
+        for (auto child = children.begin(); child != children.end(); child++){
+
+            child->get_subtree_qdags(subtree);
+        }
+    }
+
+    void set_relations(vector<qdag> new_relations){
         relations = new_relations;
     }
 
-    void exec_multijoin()
-    {
+    void exec_multijoin(){
         // ejecuta multijoin entre las relaciones del nodo y reemplaza el vector de relaciones
         if (relations.size() == 1) {
             return;
@@ -85,50 +79,41 @@ public:
         relations.shrink_to_fit();
     }
 
-    void deep_exec_multijoin()
-    {
+    void deep_exec_multijoin(){
         exec_multijoin();
-        for (auto child = children.begin(); child != children.end(); child++) {
+        for (auto child = children.begin(); child != children.end(); child++){
             child->deep_exec_multijoin();
         }
     }
 
-    void constrained_by_children()
-    {
+
+    void constrained_by_children(){
         // si soy hoja empiezo a subir
-        if (children.empty()) {
+        if (children.empty()){
             return;
-        } else {
+        }
+        else{
             // bajo por el árbol
-            for (auto child = children.begin(); child != children.end(); child++) {
+            for (auto child = children.begin(); child != children.end(); child++){
                 child->constrained_by_children();
             }
             // semijoin entre nodo y sus hijos. Debo pasarle un vector en el cual el primer elemento sea
             // mi qdag, y el resto son los qdag de children
             // esto debería alterar mi qdag
-	    /*
             vector<qdag> rels = get_child_qdags();
             rels.insert(rels.begin(), relations.front());
-            semiJoin(rels, false, 1000);*/
-
-	    // fix propuesto: hacer los joins de a pares
-	    for(auto child = children.begin(); child != children.end(); child++){
-	    	vector<qdag> cur(2);
-		cur[0] = relations.front();
-		cur[1] = child->get_relations().front();
-		semiJoin(cur, false, 1000);
-	    }
+            semiJoin(rels, false, 1000);
         }
     }
 
     // constrain children
-    // iterar sobre hijos y llamar semijoin entre hijo_i y nodo
-    void constrain_children()
-    {
+    //iterar sobre hijos y llamar semijoin entre hijo_i y nodo
+    void constrain_children(){
         // si soy hoja termino
-        if (children.empty()) {
+        if (children.empty()){
             return;
-        } else {
+        }
+        else {
             vector<qdag> pair(2);
             pair[1] = relations.front();
             for (auto child = children.begin(); child != children.end(); child++) {
@@ -140,20 +125,20 @@ public:
                 child->constrain_children();
             }
         }
+
     }
 
-    uint64_t size()
-    {
+    uint64_t size() {
         uint64_t total = 0;
-        for (auto qdag = relations.begin(); qdag != relations.end(); qdag++) {
+        for (auto qdag = relations.begin(); qdag != relations.end(); qdag++){
             total += qdag->size();
         }
-        for (auto child = children.begin(); child != children.end(); child++) {
+        for (auto child = children.begin(); child != children.end(); child++){
             total += child->size();
         }
         return total;
     }
-
+    
     void print_n_ones(std::optional<std::reference_wrapper<std::ofstream>> outfile)
     {
         outfile->get() << n_ones();

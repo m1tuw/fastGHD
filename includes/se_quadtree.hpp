@@ -130,7 +130,7 @@ protected:
         bit_vector k_t_ = bit_vector(k_d, 0); // OJO, cuidado con esto
         // NOTA: se podrá usar esto en vez de rankbv para el bm de active?
         // create bit vector of size kd full of 1s, because at first all cells are active
-        bit_vector active_ = bit_vector(k_d, 1);
+        bit_vector active_;
 
         std::queue<t_part_tuple> q;
         idx_type t = 0, last_level = 0;
@@ -157,7 +157,7 @@ protected:
             {
                 cur_l = l;
                 k_t_.resize(t);
-                active_.resize(t);
+                active_ = bit_vector(t, 1);
                 bv[cur_level] = rank_bv_64(k_t_);
                 active[cur_level] = rank_bv_64(active_);
                 total_ones[cur_level] = bv[cur_level].n_ones();
@@ -245,7 +245,7 @@ protected:
 
         k_t_.resize(t);
         bv[height - 1] = rank_bv_64(k_t_);
-        active_.resize(t);
+        active_ = bit_vector(t, 1);
         active[height - 1] = rank_bv_64(active_);
 
         total_ones[height - 1] = bv[height - 1].n_ones();
@@ -257,9 +257,10 @@ public:
     uint64_t size()
     {
         uint64_t i, s = 0;
-        for (i = 0; i < height; i++)
+        for (i = 0; i < height; i++) {
             s += bv[i].size_in_bytes();
-
+            s += active[i].size_in_bytes();
+        }
         return s + total_ones.size() * sizeof(uint64_t);
     }
 
@@ -338,127 +339,37 @@ public:
         return bv[level].rank(node);
     }
 
-    inline uint8_t get_node_lastlevel(uint16_t level, uint64_t node)
+    inline uint64_t get_node_lastlevel(uint16_t level, uint64_t node)
     {
-        if (k_d == 4){
-        uint8_t a = bv[level].get_4_bits(node) & active[level].get_4_bits(node);
-            return a;
-        }
-        else
-            return bv[level].get_2_bits(node) & active[level].get_2_bits(node);
+        return bv[level].get_bits(node, k_d) & active[level].get_bits(node, k_d);
     }
 
-    inline uint8_t get_node(uint16_t level, uint64_t node, uint64_t *rank_array, uint64_t rank_value)
+    inline uint64_t get_node(uint16_t level, uint64_t node, uint64_t *rank_array, uint64_t rank_value)
     {
-        uint8_t nd;
-        uint8_t nd_active;
-        if (k_d == 4)
-        {
-            nd = bv[level].get_4_bits(node);
-            nd_active = active[level].get_4_bits(node);
-            switch (nd)
-            {
-            case 0:
-                break;
-            case 1:
-                rank_array[0] = rank_value + 1;
-                break;
-            case 2:
-                rank_array[1] = rank_value + 1;
-                break;
-            case 3:
-                rank_array[0] = rank_value + 1;
-                rank_array[1] = rank_value + 2;
-                break;
-            case 4:
-                rank_array[2] = rank_value + 1;
-                break;
-            case 5:
-                rank_array[0] = rank_value + 1;
-                rank_array[2] = rank_value + 2;
-                break;
-            case 6:
-                rank_array[1] = rank_value + 1;
-                rank_array[2] = rank_value + 2;
-                break;
-            case 7:
-                rank_array[0] = rank_value + 1;
-                rank_array[1] = rank_value + 2;
-                rank_array[2] = rank_value + 3;
-                break;
-            case 8:
-                rank_array[3] = rank_value + 1;
-                break;
-            case 9:
-                rank_array[0] = rank_value + 1;
-                rank_array[3] = rank_value + 2;
-                break;
-            case 10:
-                rank_array[1] = rank_value + 1;
-                rank_array[3] = rank_value + 2;
-                break;
-            case 11:
-                rank_array[0] = rank_value + 1;
-                rank_array[1] = rank_value + 2;
-                rank_array[3] = rank_value + 3;
-                break;
-            case 12:
-                rank_array[2] = rank_value + 1;
-                rank_array[3] = rank_value + 2;
-                break;
-            case 13:
-                rank_array[0] = rank_value + 1;
-                rank_array[2] = rank_value + 2;
-                rank_array[3] = rank_value + 3;
-                break;
-            case 14:
-                rank_array[1] = rank_value + 1;
-                rank_array[2] = rank_value + 2;
-                rank_array[3] = rank_value + 3;
-                break;
-            case 15:
-                rank_array[0] = rank_value + 1;
-                rank_array[1] = rank_value + 2;
-                rank_array[2] = rank_value + 3;
-                rank_array[3] = rank_value + 4;
-                break;
-            }
-        }
-        else
-        {
-            nd = bv[level].get_2_bits(node);
-            nd_active = active[level].get_2_bits(node);
-            switch (nd)
-            {
-            case 0:
-                break;
-            case 1:
-                rank_array[0] = rank_value + 1;
-                break;
-            case 2:
-                rank_array[1] = rank_value + 1;
-                break;
-            case 3:
-                rank_array[0] = rank_value + 1;
-                rank_array[1] = rank_value + 2;
-                break;
+        uint64_t nd;
+        uint64_t nd_active;
+
+        nd = bv[level].get_bits(node, k_d);
+        nd_active = active[level].get_bits(node, k_d);
+
+        int acc= 1;
+        for (int i = 0; i < k_d; ++i) {
+            int mask = 1 << i;
+            if (mask & nd) {
+                rank_array[i] = rank_value + acc;
+                acc++;
             }
         }
 
         return nd & nd_active;
     }
 
-    inline uint8_t get_node_active(uint16_t level, uint64_t node, vector<rank_bv_64> tactive)
+    inline uint64_t get_node_active(uint16_t level, uint64_t node, vector<rank_bv_64> tactive)
     {
-        uint8_t nd;
-        if (k_d == 4)
-        {
-            nd = (~(tactive[level].get_4_bits(node)) & 0x0f);
-        }
-        else
-        {
-            nd = (~(tactive[level].get_2_bits(node)) & 0x04);
-        }
+        uint64_t nd;
+
+        nd = (~(tactive[level].get_bits(node, k_d))) & ((1<<k_d) - 1);
+
 
         return nd;
     }
@@ -485,8 +396,7 @@ public:
     {
         size_type dim = pow(k, d);
         uint64_t i, j, l, aa_r, zz;
-        for (i = 1; i < height; i++)
-        {
+        for (i = 0; i < height; i++) {
             if (bv[i].size() > 0)
                 aa_r = bv[i].size();
             else
@@ -516,8 +426,7 @@ public:
     {
         size_type dim = pow(k, d);
         uint64_t i, j, l, aa_r, zz;
-        for (i = 1; i < height; i++)
-        {
+        for (i = 0; i < height; i++) {
             if (active[i].size() > 0)
                 aa_r = active[i].size();
             else
@@ -529,8 +438,8 @@ public:
                 // read each byte
                 if (j % dim == 0)
                 {
-                    uint8_t x;
-                    x = +active[i].get_8_bits(j);
+                    uint64_t x;
+                    x = +active[i].get_bits(j, dim);
 
                     for (int l = 0; l < dim; l++)
                     {

@@ -91,6 +91,11 @@ class rank_bv_64
         return block[i>>6] + bits::cnt(seq[i>>6] & ~(0xffffffffffffffff << (i&0x3f)));
     }
 
+    inline uint64_t get_u()
+    {
+        return u;
+    }
+
     inline uint8_t get_4_bits(uint64_t start_pos)
     {
         //toma la seq, toma el bloque al cual pertenece la posicion, luego lo desplaza hacia la derecha start_pos%64, dentro del bloque y toma los último 4 bits.
@@ -130,7 +135,7 @@ class rank_bv_64
         cout << " ";
     }
 
-    uint64_t get_bits(uint64_t start_pos, k2_tree_ns::size_type dim)
+    uint32_t get_bits(uint64_t start_pos, uint64_t dim)
     {
 
         switch (dim){
@@ -160,7 +165,7 @@ class rank_bv_64
     }
 
     void bv_and(rank_bv_64 bv){
-        seq[0] &= *bv.seq;
+        seq[0] &= bv.seq[0];
     }
  
     // number of bits in the bv
@@ -181,6 +186,24 @@ class rank_bv_64
 	       + 2*sizeof(uint64_t);
     }
 
+    rank_bv_64 clone_empty()
+    {
+        rank_bv_64* bv = new rank_bv_64();
+        bv->n = this->n;
+        bv->u = this->u;
+        bv->seq = new uint64_t[(u + 63) / 64]();
+        bv->block = new uint32_t[(u + 63) / 64]();
+
+        for (uint64_t i = 0; i < (u + 63) / 64; i++) {
+            bv->seq[i] &= 0;
+        }
+
+        return *bv;
+    }
+
+    void mark_bit(uint64_t i){
+        seq[i>>6] |= 1ULL << (i % 64);
+    }
 };
 
 #endif
