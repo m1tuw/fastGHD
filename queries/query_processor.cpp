@@ -602,13 +602,15 @@ static qdag* execute_query(
 
 
     if (opt.mode == "mj") {
-        cout << "[mj] multiJoinCount = "
+        sort_relations(built.qdags);
+
+        cerr << "[mj] multiJoinCount = "
             << multiJoinCount(built.qdags)
             << endl;
 
         qdag* ans = multiJoin(built.qdags, false, 1000);
 
-        cout << "[mj] result->n_ones = "
+        cerr << "[mj] result->n_ones = "
             << ans->n_ones()
             << endl;
 
