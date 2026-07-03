@@ -1036,10 +1036,16 @@ void semiJoin(vector<qdag> &Q, bool bounded_result, uint64_t UPPER_BOUND)
         last_pos[i] = 0;
 
     // create temp active of 0s
+    /*
     bit_vector blank = bit_vector(4, 0);
     vector<rank_bv_64> temp(Q[0].getHeight());
     for (int i = 0; i < Q[0].getHeight(); i++ ) {
         temp[i] = rank_bv_64(blank);
+    }*/
+    vector<rank_bv_64> temp(Q[0].getHeight());
+
+    for (int i = 0; i < Q[0].getHeight(); i++) {
+        temp[i] = Q[0].Q->bv[i].clone_empty();
     }
     for (int level = 0; level < Q[0].getHeight(); level++) {
     cout << "[semiJoin] level=" << level
