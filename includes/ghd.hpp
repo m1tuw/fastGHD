@@ -104,12 +104,12 @@ public:
             //rels.insert(rels.begin(), relations.front());
             //semiJoin(rels, false, 1000);
 	    //
-	    for(auto child = children.begin(); child != children.end(); child++){
-		vector<qdag> cur(2);
-		cur[0] = relations.front();
-		cur[1] = child->get_relations().front();
-		semiJoin(cur, false, 1000);
-	    }
+            for(auto child = children.begin(); child != children.end(); child++){
+                vector<qdag> cur(2);
+                cur[0] = relations.front();
+                cur[1] = child->get_relations().front();
+                semiJoin(cur, false, 1000);
+            }
         }
     }
 

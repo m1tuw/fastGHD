@@ -284,6 +284,7 @@ public:
         ref_count = 1;
     }
 
+    /*
     se_quadtree(vector<uint64_t> _bv[], vector<uint64_t> _active[], const size_type grid_side, uint8_t _k, uint8_t _d)
     {
         k = _k;
@@ -296,7 +297,7 @@ public:
 
         k_d = std::pow(k, d);
 
-        // cout << /*"Join has " <<*/ _bv[height-1].size() << " \t"/* << endl*/;
+        // cout << _bv[height-1].size() << " \t"/* << endl;
 
         for (uint64_t i = 0; i < height; i++)
         {
@@ -309,7 +310,59 @@ public:
         {
             active[j] = rank_bv_64(_active[j]);
         }
+    }*/
+
+    se_quadtree(
+        vector<uint64_t> _bv[],
+        vector<uint64_t> _active[],
+        const size_type grid_side,
+        uint8_t _k,
+        uint8_t _d
+    ) {
+        k = _k;
+        d = _d;
+
+        height = std::ceil(std::log(grid_side) / std::log(k));
+        height = height > 1 ? height : 1;
+
+        k_d = std::pow(k, d);
+
+        bv = new rank_bv_64[height];
+        active = new rank_bv_64[height];
+
+        total_ones.assign(height, 0);
+
+        uint64_t width = k_d;
+
+        for (uint64_t level = 0; level < height; level++) {
+            bit_vector b(width, 0);
+            bit_vector a(width, 0);
+
+            for (uint64_t pos : _bv[level]) {
+                if (pos >= width) {
+                    throw std::runtime_error("se_quadtree result bv position out of range");
+                }
+                b[pos] = 1;
+            }
+
+            for (uint64_t pos : _active[level]) {
+                if (pos >= width) {
+                    throw std::runtime_error("se_quadtree result active position out of range");
+                }
+                a[pos] = 1;
+            }
+
+            bv[level] = rank_bv_64(b);
+            active[level] = rank_bv_64(a);
+
+            total_ones[level] = _bv[level].size();
+
+            width = _bv[level].size() * k_d;
+        }
+
+        ref_count = 1;
     }
+
 
     ~se_quadtree()
     {
