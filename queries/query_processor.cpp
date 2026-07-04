@@ -222,11 +222,21 @@ static string predicate_to_file(const string& data_dir, const string& predicate)
 static uint64_t next_power_of_two_strict(uint64_t max_value) {
     uint64_t side = 1;
 
-    while (side <= max_value) {
+    while (side < max_value) {
         side <<= 1;
     }
 
     return side;
+}
+
+static uint64_t qdag_cardinality(qdag& q) {
+    uint64_t h = q.getHeight();
+
+    if (h == 0) {
+        return 0;
+    }
+
+    return q.Q->bv[h - 1].n_ones();
 }
 
 static unordered_map<string, vector<vector<uint64_t>>*> load_relations(
@@ -292,19 +302,33 @@ static BuiltQuery build_query(const ParsedQuery& query, const Options& opt) {
         attributes.push_back((uint64_t)atom.subject_id);
         attributes.push_back((uint64_t)atom.object_id);
 
-        vector<vector<uint64_t>>& relation =
+        vector<vector<uint64_t>> relation_copy =
             *relation_by_predicate.at(atom.predicate);
 
         built.qdags.emplace_back(
-            relation,
+            relation_copy,
             attributes,
             built.grid_side,
             2,
             attributes.size()
         );
 
-        cout << "[atom] "<< atom.subject_name << ' ' << atom.predicate << ' ' << atom.object_name << endl;
+/*
+        if (opt.debug) {
+            cerr << "[atom] " << atom.subject_name << ' '
+                 << atom.predicate << ' ' << atom.object_name
+                 << " attrs=(" << atom.subject_id << "," << atom.object_id << ")"
+                 << " stored_attrs={ ";
 
+            for (uint64_t j = 0; j < built.qdags.back().nAttr(); ++j) {
+                cerr << built.qdags.back().getAttr(j) << ' ';
+            }
+
+            cerr << "} qdag_cardinality="
+                 << qdag_cardinality(built.qdags.back())
+                 << endl;
+        }
+*/
         built.edges.emplace_back(atom.subject_id, atom.object_id);
         if (opt.unit_weights) {
             built.weights.push_back(1);
@@ -439,7 +463,7 @@ static void enumerate_qdag_dfs(
 static vector<vector<uint64_t>> materialize_qdag(qdag& result) {
     vector<vector<uint64_t>> tuples;
 
-    if (result.n_ones() == 0) {
+    if (qdag_cardinality(result) == 0) {
         return tuples;
     }
 
@@ -577,17 +601,7 @@ static qdag* execute_query(
 
 
     if (opt.mode == "mj") {
-
-        cerr << "[mj] multiJoinCount = "
-            << multiJoinCount(built.qdags)
-            << endl;
-
         qdag* ans = multiJoin(built.qdags, false, 1000);
-
-        cerr << "[mj] result->n_ones = "
-            << ans->n_ones()
-            << endl;
-
         return ans;
     }
 
@@ -646,7 +660,7 @@ int main(int argc, char** argv) {
         const duration<double> elapsed = stop - start;
         double seconds = elapsed.count();
 
-        uint64_t cardinality = result->n_ones();
+        uint64_t cardinality = qdag_cardinality(*result);
 
         if (opt.debug) {
             cerr << "Execution finished:\n";

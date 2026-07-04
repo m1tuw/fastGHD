@@ -47,14 +47,6 @@ class rank_bv_64
 
     rank_bv_64(vector<uint64_t> _bv)
     {
-        // empty element fix
-        if(_bv.empty()){
-            u = 0;
-            n = 0;
-            seq = new uint64_t[1]();
-            block = new uint32_t[1]();
-            return;
-        }
         u = _bv[_bv.size() - 1] + 1; //last element
         n = _bv.size(); // each element  is a position with a 1
 
@@ -202,12 +194,7 @@ class rank_bv_64
     }
 
     void mark_bit(uint64_t i){
-	if(i>=u){
-		std::cout << "rank mark bit out of bounds: i=" << i << " u=" << u << std::endl;
-	throw std::runtime_error("rank_bv_64::mark_bit out of bounds");
-	}
         seq[i>>6] |= 1ULL << (i % 64);
-	//n++;
     }
 };
 

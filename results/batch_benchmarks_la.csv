@@ -1,0 +1,4 @@
+query_file,mode,atoms,variables,time_seconds,cardinality
+tmp_queries/j3_1.query,mj,3,4,0.169547698,245
+tmp_queries/j3_2.query,mj,3,4,0.767232738,5
+tmp_queries/j3_3.query,mj,3,4,0.126699001,1490

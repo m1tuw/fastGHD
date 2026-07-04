@@ -28,9 +28,9 @@ class qdag
         
         typedef vector<uint64_t> att_set;
         se_quadtree* Q;
-        int32_t tab_extend_5[65536];   // queries of 5 attributes, i.e., dimension 2^5=32
-        int32_t tab_extend_4[65536];
-        int32_t tab_extend_3[65536];
+        int32_t tab_extend_5[65535];   // queries of 5 attributes, i.e., dimension 2^5=32
+        int32_t tab_extend_4[65535];
+        int32_t tab_extend_3[65535];
         //int32_t tab_extend[];
         //TODO: crear tab extend genérico
 
@@ -311,11 +311,6 @@ class qdag
         // This is for a binary relation, i.e., a k^2-tree with 4 children per node
         void createTableExtend5()
         {
-	    uint64_t kd = Q->getKD();
-	    if(kd>16){
-		    std::cout << "unsupported kd " << kd << std::endl;
-		    throw std::runtime_error("kd greater than 16");
-		   }
             uint64_t i, j;
             uint32_t x, B;
             B = std::pow(2, Q->getKD());
@@ -336,11 +331,6 @@ class qdag
         // This is for a binary relation, i.e., a k^2-tree with 4 children per node
         void createTableExtend4()
         {
-	    uint64_t kd = Q->getKD();
-	    if(kd>16){
-		    std::cout << "unsupported kd " << kd << std::endl;
-		    throw std::runtime_error("kd greater than 16");
-		   }
             uint64_t i, j;
             uint32_t x, B;
             B = std::pow(2, Q->getKD());
@@ -361,11 +351,6 @@ class qdag
         // This is for a binary relation, i.e., a k^2-tree with 4 children per node
         void createTableExtend3()
         {
-	    uint64_t kd = Q->getKD();
-	    if(kd>16){
-		    std::cout << "unsupported kd " << kd << std::endl;
-		    throw std::runtime_error("kd greater than 16");
-		   }
             uint64_t i, j;
             uint32_t x, B;
             B = std::pow(2, Q->getKD());

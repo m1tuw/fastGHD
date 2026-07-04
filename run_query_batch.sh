@@ -3,7 +3,7 @@ set -euo pipefail
 
 QUERY_DIR="queries_new"
 DATA_DIR="data3"
-MODE="yk"
+MODE="mj"
 
 mkdir -p results tmp_queries
 
