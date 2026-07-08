@@ -659,13 +659,15 @@ bool SemiAND(qdag **Q, uint64_t *roots, uint16_t nQ,
         }
         // Stop the descent through branches that are marked in active
         //TODO: generalizar esto para solo tener un llamado
+        // aqui esta el mismisimo pruning
+        /*
         if (nAtt == 3)
             mat_node =  Q[0]->materialize_active_node_3(cur_level, roots[0], temp_bv);
         else if (nAtt == 4)
             mat_node = Q[0]->materialize_active_node_4(cur_level, roots[0], temp_bv);
         else if (nAtt == 5)
             mat_node = Q[0]->materialize_active_node_5(cur_level, roots[0], temp_bv);
-        children &= mat_node;
+        children &= mat_node;*/
 
         // por cuántos hijos voy a bajar, cuenta la cantitdad de 1s en un arreglo de bits/entero
         children_to_recurse_size = bits::cnt((uint64_t)children);
@@ -710,9 +712,11 @@ bool SemiAND(qdag **Q, uint64_t *roots, uint16_t nQ,
                 uint64_t temp_children = temp_bv[cur_level+1].get_bits(root_temp[0], Q[0]->Q->getKD());
                 uint64_t leftQ_children = Q[0]->Q->bv[cur_level+1].get_bits(root_temp[0], Q[0]->Q->getKD());
 
+                /* comentado en el commit que quita el pruning, asi que debe funcionar
                 if (temp_children == leftQ_children){
                     temp_bv[cur_level].mark_bit(roots[0] + Q[0]->getM(last_pos[cur_level] % p));
                 }
+                */
                 
                 last_pos[cur_level]++;
 

@@ -3,7 +3,7 @@ set -euo pipefail
 
 QUERY_DIR="queries_new"
 DATA_DIR="data3"
-MODE="mj"
+MODE="yk"
 
 mkdir -p results tmp_queries
 
@@ -44,7 +44,6 @@ for QUERY_LIST in "$QUERY_DIR"/*.txt; do
       --data-dir "$DATA_DIR" \
       --mode "$MODE" \
       --no-dump \
-      --unit-weights \
       --debug \
       --bench "$BENCH_OUT"
 
