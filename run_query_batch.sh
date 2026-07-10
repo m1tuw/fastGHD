@@ -44,7 +44,6 @@ for QUERY_LIST in "$QUERY_DIR"/*.txt; do
       --data-dir "$DATA_DIR" \
       --mode "$MODE" \
       --no-dump \
-      --debug \
       --bench "$BENCH_OUT"
 
   done < "$QUERY_LIST"
