@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <sys/resource.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -560,7 +561,9 @@ static void dump_results_sorted(
 static void append_benchmark(
     const Options& opt,
     const ParsedQuery& query,
-    double seconds,
+    double wall_seconds,
+    double user_seconds,
+    double system_seconds,
     uint64_t cardinality
 ) {
     if (opt.benchmark_file.empty()) {
@@ -582,14 +585,17 @@ static void append_benchmark(
     }
 
     if (!file_already_exists) {
-        out << "query_file,mode,atoms,variables,time_seconds,cardinality\n";
+        out << "query_file,mode,atoms,variables,wall_seconds,user_seconds,system_seconds,cardinality\n";
     }
 
     out << opt.query_file << ','
         << opt.mode << ','
         << query.atoms.size() << ','
         << query.var_names.size() << ','
-        << fixed << setprecision(9) << seconds << ','
+        << fixed << setprecision(9)
+        << wall_seconds << ','
+        << user_seconds << ','
+        << system_seconds << ','
         << cardinality << '\n';
 }
 
@@ -626,8 +632,24 @@ static qdag* execute_query(
     return ans;
 }
 
+// para medir user y system time
+static double timeval_to_seconds(const timeval& t) {
+    return t.tv_sec + t.tv_usec / 1000000.0;
+}
+
+static double user_time_seconds() {
+    rusage usage{};
+    getrusage(RUSAGE_SELF, &usage);
+    return timeval_to_seconds(usage.ru_utime);
+}
+
+static double system_time_seconds() {
+    rusage usage{};
+    getrusage(RUSAGE_SELF, &usage);
+    return timeval_to_seconds(usage.ru_stime);
+}
+
 int main(int argc, char** argv) {
-	cout << "[DEBUG] entered main" << endl;
     try {
         Options opt = parse_options(argc, argv);
 
@@ -651,25 +673,32 @@ int main(int argc, char** argv) {
             cerr << "  grid_side: " << built.grid_side << '\n';
         }
 
-        high_resolution_clock::time_point start = high_resolution_clock::now();
+        double user_start = user_time_seconds();
+        double sys_start = system_time_seconds();
+        auto wall_start = high_resolution_clock::now();
 
         qdag* result = execute_query(query, built, opt);
 
-        high_resolution_clock::time_point stop = high_resolution_clock::now();
+        auto wall_stop = high_resolution_clock::now();
+        double user_end = user_time_seconds();
+        double sys_end = system_time_seconds();
 
-        const duration<double> elapsed = stop - start;
-        double seconds = elapsed.count();
+        double wall_seconds = duration<double>(wall_stop - wall_start).count();
+        double user_seconds = user_end - user_start;
+        double system_seconds = sys_end - sys_start;
 
         uint64_t cardinality = qdag_cardinality(*result);
 
         if (opt.debug) {
             cerr << "Execution finished:\n";
             cerr << "  mode:        " << opt.mode << '\n';
-            cerr << "  time:        " << fixed << setprecision(9) << seconds << "s\n";
+            cerr << "  wall time:   " << fixed << setprecision(9) << wall_seconds << "s\n";
+            cerr << "  user time:   " << fixed << setprecision(9) << user_seconds << "s\n";
+            cerr << "  system time: " << fixed << setprecision(9) << system_seconds << "s\n";
             cerr << "  cardinality: " << cardinality << '\n';
         }
 
-        append_benchmark(opt, query, seconds, cardinality);
+        append_benchmark(opt, query, wall_seconds, user_seconds, system_seconds, cardinality);
 
         if (opt.dump_results) {
             dump_results_sorted(*result, query, opt.output_file);
