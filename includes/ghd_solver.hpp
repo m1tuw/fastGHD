@@ -50,9 +50,10 @@ public:
         std::vector<bool> used_bags(1 << n);
         std::vector<std::vector<int>> bags;
 
+        /*
         if (verbose) {
             std::cout << "finding upper bound" << '\n';
-        }
+        }*/
 
         prune = true;
         backtrack(used_nodes, used_edges, used_bags, 0.0, bags, edges, -1, weights);
@@ -86,7 +87,8 @@ public:
         result.join_tree = xd.second;
         result.join_tree_root = xd.first;
 
-        if (true) {
+        /*
+        if (false) {
             std::cout << "\n[GHD solver] result.weight: " << result.weight << '\n';
 
             std::cout << "[GHD solver] bags:\n";
@@ -112,10 +114,10 @@ public:
             }
 
             std::cout << std::endl;
-        }	  
+        }*/	  
 
 
-        std::cout << "result.weight: " << result.weight << '\n';
+        //std::cout << "result.weight: " << result.weight << '\n';
         return result;
     }
 
@@ -178,9 +180,10 @@ private:
                 if (current_weight < best) {
                     solution = bags;
                     best = current_weight;
+                    /*
                     if (verbose) {
                         std::cout << "new best found: " << current_weight << std::endl;
-                    }
+                    }*/
                     best_last_opt = last_opt;
                 }
             }

@@ -599,38 +599,11 @@ static void append_benchmark(
         << cardinality << '\n';
 }
 
-static qdag* execute_query(
-    const ParsedQuery& query,
-    BuiltQuery& built,
-    const Options& opt
-) {
-
-
-    if (opt.mode == "mj") {
-        qdag* ans = multiJoin(built.qdags, false, 1000);
-        return ans;
-    }
-
-    cout << "[yk] computing GHD..." << endl;
-
-    ghd root;
-
-    root = root.get_optimal_ghd(
-        (int)query.var_names.size(),
-        (int)query.atoms.size(),
-        built.edges,
-        built.qdags,
-        built.weights
-    );
-
-    cout << "[yk] GHD computed, running yannakakis..." << endl;
-
-    qdag* ans = yannakakis(root, {});
-	
-    cout << "[yk] yannakakis finished" << endl;
-
-    return ans;
-}
+struct BenchmarkResults {
+    double wall_seconds = 0.0;
+    double user_seconds = 0.0;
+    double system_seconds = 0.0;
+};
 
 // para medir user y system time
 static double timeval_to_seconds(const timeval& t) {
@@ -647,6 +620,70 @@ static double system_time_seconds() {
     rusage usage{};
     getrusage(RUSAGE_SELF, &usage);
     return timeval_to_seconds(usage.ru_stime);
+}
+
+static qdag* execute_query(
+    const ParsedQuery& query,
+    BuiltQuery& built,
+    const Options& opt,
+    BenchmarkResults& results
+) {
+
+
+    if (opt.mode == "mj") {
+        rusage usage_start{}, usage_end{};
+        getrusage(RUSAGE_SELF, &usage_start);
+        auto wall_start = steady_clock::now();
+
+        qdag* ans = multiJoin(built.qdags, false, 1000);
+
+        auto wall_stop = steady_clock::now();
+        getrusage(RUSAGE_SELF, &usage_end);
+
+        double wall_seconds = duration<double>(wall_stop - wall_start).count();
+        double user_seconds = timeval_to_seconds(usage_end.ru_utime) - timeval_to_seconds(usage_start.ru_utime);
+        double system_seconds = timeval_to_seconds(usage_end.ru_stime) - timeval_to_seconds(usage_start.ru_stime);
+
+        results.wall_seconds = wall_seconds;
+        results.user_seconds = user_seconds;
+        results.system_seconds = system_seconds;
+
+        return ans;
+    }
+
+    if(opt.debug) cout << "[yk] computing GHD..." << endl;
+
+    ghd root;
+
+    root = root.get_optimal_ghd(
+        (int)query.var_names.size(),
+        (int)query.atoms.size(),
+        built.edges,
+        built.qdags,
+        built.weights
+    );
+
+    if(opt.debug) cout << "[yk] GHD computed, running yannakakis..." << endl;
+
+    rusage usage_start{}, usage_end{};
+    getrusage(RUSAGE_SELF, &usage_start);
+    auto wall_start = steady_clock::now();
+
+    qdag* ans = yannakakis(root, {});
+
+    auto wall_stop = steady_clock::now();
+    getrusage(RUSAGE_SELF, &usage_end);
+    double wall_seconds = duration<double>(wall_stop - wall_start).count();
+    double user_seconds = timeval_to_seconds(usage_end.ru_utime) - timeval_to_seconds(usage_start.ru_utime);
+    double system_seconds = timeval_to_seconds(usage_end.ru_stime) - timeval_to_seconds(usage_start.ru_stime);
+
+    results.wall_seconds = wall_seconds;
+    results.user_seconds = user_seconds;
+    results.system_seconds = system_seconds;
+
+    if(opt.debug) cout << "[yk] yannakakis finished" << endl;
+
+    return ans;
 }
 
 int main(int argc, char** argv) {
@@ -673,19 +710,12 @@ int main(int argc, char** argv) {
             cerr << "  grid_side: " << built.grid_side << '\n';
         }
 
-        double user_start = user_time_seconds();
-        double sys_start = system_time_seconds();
-        auto wall_start = high_resolution_clock::now();
+        BenchmarkResults benchmarkresults;
+        qdag* result = execute_query(query, built, opt, benchmarkresults);
 
-        qdag* result = execute_query(query, built, opt);
-
-        auto wall_stop = high_resolution_clock::now();
-        double user_end = user_time_seconds();
-        double sys_end = system_time_seconds();
-
-        double wall_seconds = duration<double>(wall_stop - wall_start).count();
-        double user_seconds = user_end - user_start;
-        double system_seconds = sys_end - sys_start;
+        double wall_seconds = benchmarkresults.wall_seconds;
+        double user_seconds = benchmarkresults.user_seconds;
+        double system_seconds = benchmarkresults.system_seconds;
 
         uint64_t cardinality = qdag_cardinality(*result);
 
