@@ -254,7 +254,7 @@ bool AND(qdag *Q[], uint64_t *roots, uint16_t nQ,
     bool result = false;
     //uint64_t root_temp[nQ];
     bool just_zeroes = true;
-    uint64_t k_d[nQ]; // CUIDADO, solo hasta 16 relaciones por query
+    uint64_t k_d[16]; // CUIDADO, solo hasta 16 relaciones por query
 
     uint16_t children_to_recurse[512 /*p*/]; // CUIDADO, solo hasta 9 atributos distintos por query
 

@@ -728,7 +728,7 @@ int main(int argc, char** argv) {
             cerr << "  cardinality: " << cardinality << '\n';
         }
         cerr << "user time: " << fixed << setprecision(9) << user_seconds << "s\n";
-
+        cerr << "cardinality: " << cardinality << '\n';
         append_benchmark(opt, query, wall_seconds, user_seconds, system_seconds, cardinality);
 
         if (opt.dump_results) {

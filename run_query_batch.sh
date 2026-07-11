@@ -7,7 +7,7 @@ MODE="mj"
 
 mkdir -p results tmp_queries
 
-BENCH_OUT="results/pinga_mj.csv"
+BENCH_OUT="results/test_arroyuelo_changes_mj.csv"
 : > "$BENCH_OUT"
 
 global_query_id=0
