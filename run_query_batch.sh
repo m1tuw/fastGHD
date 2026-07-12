@@ -7,7 +7,7 @@ MODE="yk"
 
 mkdir -p results tmp_queries
 
-BENCH_OUT="results/test_arroyuelo_changes_yk.csv"
+BENCH_OUT="results/test_arroyuelo_changes_yk_detailedtimes.csv"
 : > "$BENCH_OUT"
 
 global_query_id=0

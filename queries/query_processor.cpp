@@ -561,9 +561,13 @@ static void dump_results_sorted(
 static void append_benchmark(
     const Options& opt,
     const ParsedQuery& query,
+    const string& ghd_shape,
     double wall_seconds,
     double user_seconds,
     double system_seconds,
+    double ghd_wall_seconds,
+    double ghd_user_seconds,
+    double ghd_system_seconds,
     uint64_t cardinality
 ) {
     if (opt.benchmark_file.empty()) {
@@ -585,17 +589,29 @@ static void append_benchmark(
     }
 
     if (!file_already_exists) {
-        out << "query_file,mode,atoms,variables,wall_seconds,user_seconds,system_seconds,cardinality\n";
+        out << "query_file,mode,atoms,variables,ghd_shape,"
+            << "wall_seconds,user_seconds,system_seconds,"
+            << "ghd_wall_seconds,ghd_user_seconds,ghd_system_seconds,"
+            << "bags_user_seconds,semijoins_user_seconds,"
+            << "final_qdag_user_seconds,"
+            << "cardinality\n";
     }
 
     out << opt.query_file << ','
         << opt.mode << ','
         << query.atoms.size() << ','
         << query.var_names.size() << ','
+        << ghd_shape << ','
         << fixed << setprecision(9)
         << wall_seconds << ','
         << user_seconds << ','
         << system_seconds << ','
+        << ghd_wall_seconds << ','
+        << ghd_user_seconds << ','
+        << ghd_system_seconds << ','
+        << yk_bags_user_seconds << ','
+        << yk_semijoins_user_seconds << ','
+        << yk_final_qdag_user_seconds << ','
         << cardinality << '\n';
 }
 
@@ -603,6 +619,7 @@ struct BenchmarkResults {
     double wall_seconds = 0.0;
     double user_seconds = 0.0;
     double system_seconds = 0.0;
+    
 };
 
 // para medir user y system time
@@ -626,11 +643,17 @@ static qdag* execute_query(
     const ParsedQuery& query,
     BuiltQuery& built,
     const Options& opt,
-    BenchmarkResults& results
+    BenchmarkResults& results,
+    BenchmarkResults& tree_decomp_benchmark,
+    string& ghd_shape
 ) {
-
-
     if (opt.mode == "mj") {
+        yk_bags_user_seconds = 0.0;
+        yk_semijoins_user_seconds = 0.0;
+        yk_final_qdag_user_seconds = 0.0;
+        ghd_shape = "none";
+        tree_decomp_benchmark = {};
+
         rusage usage_start{}, usage_end{};
         getrusage(RUSAGE_SELF, &usage_start);
         auto wall_start = steady_clock::now();
@@ -640,30 +663,57 @@ static qdag* execute_query(
         auto wall_stop = steady_clock::now();
         getrusage(RUSAGE_SELF, &usage_end);
 
-        double wall_seconds = duration<double>(wall_stop - wall_start).count();
-        double user_seconds = timeval_to_seconds(usage_end.ru_utime) - timeval_to_seconds(usage_start.ru_utime);
-        double system_seconds = timeval_to_seconds(usage_end.ru_stime) - timeval_to_seconds(usage_start.ru_stime);
+        results.wall_seconds =
+            duration<double>(wall_stop - wall_start).count();
 
-        results.wall_seconds = wall_seconds;
-        results.user_seconds = user_seconds;
-        results.system_seconds = system_seconds;
+        results.user_seconds =
+            timeval_to_seconds(usage_end.ru_utime)
+            - timeval_to_seconds(usage_start.ru_utime);
+
+        results.system_seconds =
+            timeval_to_seconds(usage_end.ru_stime)
+            - timeval_to_seconds(usage_start.ru_stime);
 
         return ans;
     }
 
-    if(opt.debug) cout << "[yk] computing GHD..." << endl;
+    if (opt.debug) {
+        cout << "[yk] computing GHD..." << endl;
+    }
 
     ghd root;
 
+    rusage tree_usage_start{}, tree_usage_end{};
+    getrusage(RUSAGE_SELF, &tree_usage_start);
+    auto tree_wall_start = steady_clock::now();
+
     root = root.get_optimal_ghd(
-        (int)query.var_names.size(),
-        (int)query.atoms.size(),
+        static_cast<int>(query.var_names.size()),
+        static_cast<int>(query.atoms.size()),
         built.edges,
         built.qdags,
         built.weights
     );
 
-    if(opt.debug) cout << "[yk] GHD computed, running yannakakis..." << endl;
+    auto tree_wall_stop = steady_clock::now();
+    getrusage(RUSAGE_SELF, &tree_usage_end);
+
+    tree_decomp_benchmark.wall_seconds =
+        duration<double>(
+            tree_wall_stop - tree_wall_start
+        ).count();
+
+    tree_decomp_benchmark.user_seconds =
+        timeval_to_seconds(tree_usage_end.ru_utime)
+        - timeval_to_seconds(tree_usage_start.ru_utime);
+
+    tree_decomp_benchmark.system_seconds =
+        timeval_to_seconds(tree_usage_end.ru_stime)
+        - timeval_to_seconds(tree_usage_start.ru_stime);
+
+    if (opt.debug) {
+        cout << "[yk] GHD computed, running yannakakis..." << endl;
+    }
 
     rusage usage_start{}, usage_end{};
     getrusage(RUSAGE_SELF, &usage_start);
@@ -673,15 +723,23 @@ static qdag* execute_query(
 
     auto wall_stop = steady_clock::now();
     getrusage(RUSAGE_SELF, &usage_end);
-    double wall_seconds = duration<double>(wall_stop - wall_start).count();
-    double user_seconds = timeval_to_seconds(usage_end.ru_utime) - timeval_to_seconds(usage_start.ru_utime);
-    double system_seconds = timeval_to_seconds(usage_end.ru_stime) - timeval_to_seconds(usage_start.ru_stime);
 
-    results.wall_seconds = wall_seconds;
-    results.user_seconds = user_seconds;
-    results.system_seconds = system_seconds;
+    results.wall_seconds =
+        duration<double>(wall_stop - wall_start).count();
 
-    if(opt.debug) cout << "[yk] yannakakis finished" << endl;
+    results.user_seconds =
+        timeval_to_seconds(usage_end.ru_utime)
+        - timeval_to_seconds(usage_start.ru_utime);
+
+    results.system_seconds =
+        timeval_to_seconds(usage_end.ru_stime)
+        - timeval_to_seconds(usage_start.ru_stime);
+
+    ghd_shape = root.shape_string();
+
+    if (opt.debug) {
+        cout << "[yk] yannakakis finished" << endl;
+    }
 
     return ans;
 }
@@ -710,12 +768,25 @@ int main(int argc, char** argv) {
             cerr << "  grid_side: " << built.grid_side << '\n';
         }
 
-        BenchmarkResults benchmarkresults;
-        qdag* result = execute_query(query, built, opt, benchmarkresults);
+        BenchmarkResults benchmarkresults, tree_decomp_benchmark;
+        string ghd_shape;
+
+        qdag* result = execute_query(
+            query,
+            built,
+            opt,
+            benchmarkresults,
+            tree_decomp_benchmark,
+            ghd_shape
+        );
 
         double wall_seconds = benchmarkresults.wall_seconds;
         double user_seconds = benchmarkresults.user_seconds;
         double system_seconds = benchmarkresults.system_seconds;
+
+        double td_wall_seconds = tree_decomp_benchmark.wall_seconds;
+        double td_user_seconds = tree_decomp_benchmark.user_seconds;
+        double td_system_seconds = tree_decomp_benchmark.system_seconds;
 
         uint64_t cardinality = qdag_cardinality(*result);
 
@@ -727,9 +798,40 @@ int main(int argc, char** argv) {
             cerr << "  system time: " << fixed << setprecision(9) << system_seconds << "s\n";
             cerr << "  cardinality: " << cardinality << '\n';
         }
-        cerr << "user time: " << fixed << setprecision(9) << user_seconds << "s\n";
-        cerr << "cardinality: " << cardinality << '\n';
-        append_benchmark(opt, query, wall_seconds, user_seconds, system_seconds, cardinality);
+        cerr << "td solver user time: "
+            << fixed << setprecision(9)
+            << td_user_seconds << "s\n";
+
+        cerr << "query user time: "
+            << fixed << setprecision(9)
+            << user_seconds << "s\n";
+
+        cerr << "  bags user time: "
+            << fixed << setprecision(9)
+            << yk_bags_user_seconds << "s\n";
+
+        cerr << "  semijoins user time: "
+            << fixed << setprecision(9)
+            << yk_semijoins_user_seconds << "s\n";
+
+        cerr << "  final qdag user time: "
+            << fixed << setprecision(9)
+            << yk_final_qdag_user_seconds << "s\n";
+
+        cerr << "cardinality: "
+            << cardinality << '\n';
+        append_benchmark(
+            opt,
+            query,
+            ghd_shape,
+            wall_seconds,
+            user_seconds,
+            system_seconds,
+            td_wall_seconds,
+            td_user_seconds,
+            td_system_seconds,
+            cardinality
+        );
 
         if (opt.dump_results) {
             dump_results_sorted(*result, query, opt.output_file);

@@ -7,6 +7,9 @@
 
 #include <inttypes.h>
 #include <vector>
+#include <algorithm>
+#include <sstream>
+#include <string>
 
 #include "ghd_solver.hpp"
 #include "qdags.hpp"
@@ -296,6 +299,55 @@ public:
         };
 
         return build(join_tree_root);
+    }
+
+    /*
+    prints the hypertree decomposition so that i can include it in the benchmarks
+    */
+    string shape_string() {
+        vector<uint64_t> bag_variables;
+
+        for (qdag& relation : relations) {
+            for (uint64_t i = 0; i < relation.nAttr(); ++i) {
+                bag_variables.push_back(relation.getAttr(i));
+            }
+        }
+
+        sort(bag_variables.begin(), bag_variables.end());
+        bag_variables.erase(
+            unique(bag_variables.begin(), bag_variables.end()),
+            bag_variables.end()
+        );
+
+        ostringstream out;
+
+        out << '{';
+
+        for (size_t i = 0; i < bag_variables.size(); ++i) {
+            if (i > 0) {
+                out << '+';
+            }
+
+            out << bag_variables[i];
+        }
+
+        out << '}';
+
+        if (!children.empty()) {
+            out << '(';
+
+            for (size_t i = 0; i < children.size(); ++i) {
+                if (i > 0) {
+                    out << '|';
+                }
+
+                out << children[i].shape_string();
+            }
+
+            out << ')';
+        }
+
+        return out.str();
     }
 };
 

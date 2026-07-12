@@ -9,6 +9,19 @@
 #include <ratio>
 #include <optional>
 
+// para medir tiempos
+double yk_bags_user_seconds = 0.0;
+double yk_semijoins_user_seconds = 0.0;
+double yk_final_qdag_user_seconds = 0.0;
+
+static double yk_current_user_seconds() {
+    rusage usage{};
+    getrusage(RUSAGE_SELF, &usage);
+
+    return static_cast<double>(usage.ru_utime.tv_sec)
+         + static_cast<double>(usage.ru_utime.tv_usec) / 1000000.0;
+}
+
 using namespace std::chrono;
 
 high_resolution_clock::time_point start_select, stop_select;
@@ -19,23 +32,51 @@ qdag* yannakakis(ghd root, std::optional<std::reference_wrapper<std::ofstream>> 
 {
     float init, mid, end;
     
+    // setear todos los tiempos en cero
+    yk_bags_user_seconds = 0.0;
+    yk_semijoins_user_seconds = 0.0;
+    yk_final_qdag_user_seconds = 0.0;
+
+
+    /*
+    aca parte la primera fase
+    */
     init = root.size();
     //cout << "GHD size before multijoins:" << root.size() << endl;
     // Ejecutar multijoin en todos los niveles
+    double user_start = yk_current_user_seconds();
+
     root.deep_exec_multijoin();
 
+    yk_bags_user_seconds = yk_current_user_seconds() - user_start;
+
+
+    /*
+    aca parte la segunda fase
+    */
     //cout << "GHD size after multijoins:" << root.size() << endl;
     mid = root.size();
     // Ejecutar semijoin entre root y nivel 1
-    root.constrained_by_children();
+    user_start = yk_current_user_seconds();
 
+    root.constrained_by_children();
     root.constrain_children();
 
+    yk_semijoins_user_seconds = yk_current_user_seconds() - user_start;
+
+
+    /*
+    aca parte la tercera fase
+    */
     // multijoin entre nodos para obtener resultado del join
+    user_start = yk_current_user_seconds();
+
     vector<qdag> producto_punto;
     root.get_subtree_qdags(producto_punto);
-
     qdag* qResult = multiJoin(producto_punto, false, 1000);
+
+    yk_final_qdag_user_seconds = yk_current_user_seconds() - user_start;
+
     end = qResult->size();
     if(outfile){
         outfile->get() << init << "," << mid << "," << end;
