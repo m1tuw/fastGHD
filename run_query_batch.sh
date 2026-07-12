@@ -3,11 +3,11 @@ set -euo pipefail
 
 QUERY_DIR="queries_new"
 DATA_DIR="data3"
-MODE="mj"
+MODE="yk"
 
 mkdir -p results tmp_queries
 
-BENCH_OUT="results/test_arroyuelo_changes_mj.csv"
+BENCH_OUT="results/test_arroyuelo_changes_yk.csv"
 : > "$BENCH_OUT"
 
 global_query_id=0
@@ -43,6 +43,7 @@ for QUERY_LIST in "$QUERY_DIR"/*.txt; do
       --query "$QUERY_FILE" \
       --data-dir "$DATA_DIR" \
       --mode "$MODE" \
+      --unit-weights \
       --no-dump \
       --bench "$BENCH_OUT"
 

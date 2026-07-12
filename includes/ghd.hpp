@@ -237,69 +237,35 @@ public:
             return in_bag[b][u] && in_bag[b][v];
         };
 
-        /*
-         * relations_per_bag[b] stores the ids of qdags assigned to bag b.
-         *
-         * Important: this implementation of class ghd assumes each node has at least
-         * one qdag, because several methods use relations.front().
-         *
-         * Therefore we first try to assign one unique edge to every bag.
-         */
+        
         vector<vector<int>> relations_per_bag(B);
-        vector<int> assigned_edge(number_of_edges, -1);
+        vector<int> edge_cover_count(number_of_edges, 0);
 
-        // First pass: try to give each bag at least one still-unassigned edge.
-        for (int b = 0; b < B; b++) {
-            for (int e = 0; e < number_of_edges; e++) {
-                if (assigned_edge[e] == -1 && bag_contains_edge(b, e)) {
-                    assigned_edge[e] = b;
-                    relations_per_bag[b].push_back(e);
-                    break;
-                }
-            }
-        }
+        for (int b = 0; b < B; ++b) {
+            relations_per_bag[b].reserve(number_of_edges);
 
-        // Second pass: assign all remaining edges to the first bag that contains them.
-        for (int e = 0; e < number_of_edges; e++) {
-            if (assigned_edge[e] != -1) {
-                continue;
-            }
-
-            for (int b = 0; b < B; b++) {
-                if (bag_contains_edge(b, e)) {
-                    assigned_edge[e] = b;
-                    relations_per_bag[b].push_back(e);
-                    break;
-                }
-            }
-
-            if (assigned_edge[e] == -1) {
-                throw std::runtime_error("No bag contains both endpoints of an edge");
-            }
-        }
-
-        /*
-         * If a bag still has no relation, we duplicate any qdag whose edge is
-         * contained in that bag.
-         *
-         * This is needed because the current ghd class cannot represent an
-         * attribute-only bag. Duplicating an atom is logically harmless for the join,
-         * but it can add some extra work.
-         */
-        for (int b = 0; b < B; b++) {
-            if (!relations_per_bag[b].empty()) {
-                continue;
-            }
-
-            for (int e = 0; e < number_of_edges; e++) {
+            for (int e = 0; e < number_of_edges; ++e) {
                 if (bag_contains_edge(b, e)) {
                     relations_per_bag[b].push_back(e);
-                    break;
+                    ++edge_cover_count[e];
                 }
             }
 
             if (relations_per_bag[b].empty()) {
-                throw std::runtime_error("Bag has no contained edge/qdag to assign");
+                throw std::runtime_error(
+                    "Bag has no induced edge/qdag; "
+                    "the current ghd representation cannot represent "
+                    "an attribute-only bag"
+                );
+            }
+        }
+
+        for (int e = 0; e < number_of_edges; ++e) {
+            if (edge_cover_count[e] == 0) {
+                throw std::runtime_error(
+                    "No bag contains both endpoints of query edge " +
+                    std::to_string(e)
+                );
             }
         }
 
