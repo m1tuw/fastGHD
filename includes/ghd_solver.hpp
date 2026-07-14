@@ -43,7 +43,7 @@ public:
         fec_precalc.assign(bag_count, 0.0);
         ready.assign(bag_count, 0);
 
-        generate_permutation_of_bags();
+        generate_permutation_of_bags(number_of_nodes, number_of_edges, edges, weights);
 
         std::vector<bool> used_nodes(n);
         std::vector<bool> used_edges(m);
@@ -82,7 +82,15 @@ public:
         GHDResult result;
         result.bags = solution;
         result.weight = best;
-        auto xd = hypergraph::recover_join_tree(solution, n);
+        double total_join_cost = 0.0;
+
+        auto xd = hypergraph::recover_join_tree(
+            solution,
+            n,
+            edges,
+            weights,
+            total_join_cost
+        );
 
         result.join_tree = xd.second;
         result.join_tree_root = xd.first;
@@ -142,14 +150,58 @@ private:
         return count;
     }
 
-    void generate_permutation_of_bags() {
+    // for each permutation, generate its induced subgraph and calculate AGM bound
+    void generate_permutation_of_bags(int number_of_nodes, int number_of_edges, const std::vector<std::pair<int, int>>& edges, const std::vector<int>& weights) {
         mask_permutation.clear();
         for (int i = 1; i < (1 << n); ++i) {
             mask_permutation.push_back(i);
         }
+        std::vector<double> mask_weights(1<<n);
+        // for each mask, compute its weight
+        for(int idx = 0; idx < mask_permutation.size(); idx++){
+            std::vector<solver::Edge> induced_subgraph;
+            std::vector<int> induced_subgraph_weights;
+            int mask = mask_permutation[idx];
+            int d = popcount_int(mask);
+            // now process all edges
+            
+            for (int i = 0; i < edges.size(); ++i) {
+                int u = edges[i].first;
+                int v = edges[i].second;
+                if ((mask & (1 << u)) && (mask & (1 << v))) {
+                    solver::Edge e{};
+                    e.u = u;
+                    e.v = v;
+                    e.w = log2((double)weights[i]); // optimizing sum of x_i log(N_i)
+                    induced_subgraph.push_back(e);
+                    induced_subgraph_weights.push_back(weights[i]);
+                }
+            }
+            // compute AGM bound
+            double bag_cost = 1;
+            if (!ready[mask]) {
+                solver::FractionalEdgeCoverSolver fecs;
+                solver::Result res = fecs.solve(induced_subgraph, n);
+                for(int i = 0; i < res.solution.size(); i++){
+                    bag_cost *= pow(induced_subgraph_weights[i], res.solution[i]);
+                }
+                // complexity of solving a query over this bag (the set of edges is fixed)
+                fec_precalc[mask] = bag_cost;
+                ready[mask] = 1;
+                
+            } else {
+                bag_cost = fec_precalc[mask];
+            }
+            bag_cost *= pow(2, d);
+            mask_weights[mask] = bag_cost;
+        }
 
+        /*
         std::sort(mask_permutation.begin(), mask_permutation.end(), [&](int a, int b) {
             return popcount_int(a) > popcount_int(b);
+        });*/
+        std::sort(mask_permutation.begin(), mask_permutation.end(), [&](int a, int b){
+            return mask_weights[a] > mask_weights[b];
         });
     }
 
@@ -175,18 +227,39 @@ private:
             cntm += used_edges[i];
         }
 
+        // leaf case
+        // leaf case
         if (cntn == n && cntm == m) {
             if (hypergraph::is_hypertree(bags, n)) {
-                if (current_weight < best) {
+                double total_join_cost = 0.0;
+
+                hypergraph::recover_join_tree(
+                    bags,
+                    n,
+                    edges,
+                    weights,
+                    total_join_cost
+                );
+
+                const double true_weight =
+                    current_weight + total_join_cost;
+
+                if (true_weight < best) {
                     solution = bags;
-                    best = current_weight;
+                    best = true_weight;
+                    best_last_opt = last_opt;
+
                     /*
                     if (verbose) {
-                        std::cout << "new best found: " << current_weight << std::endl;
-                    }*/
-                    best_last_opt = last_opt;
+                        std::cout
+                            << "new best found: "
+                            << true_weight
+                            << '\n';
+                    }
+                    */
                 }
             }
+
             return;
         }
 
@@ -242,7 +315,7 @@ private:
             }
 
             // join on size d bag on qdags: 2^d
-            double bag_cost = pow(2,d);
+            double bag_cost = 1;
             // placeholder for relation sizes
             const double M = 1;
             // take the product of rel_size^matching_on_that_edge
@@ -259,6 +332,7 @@ private:
             } else {
                 bag_cost = fec_precalc[mask];
             }
+            bag_cost *= pow(2, d);
 
             if (current_weight + bag_cost >= best) {
                 continue;

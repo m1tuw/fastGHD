@@ -1,10 +1,16 @@
 #include "project/hypergraphs/hypertree_check.hpp"
+#include "project/fractional_edge_cover_solver/fractional_edge_cover_solver.hpp"
 
+#include <iostream>
 #include <algorithm>
+#include <cmath>
 #include <numeric>
 #include <queue>
+#include <stdexcept>
+#include <string>
+#include <utility>
 #include <vector>
-#include <iostream>
+#include <limits>
 
 namespace hypergraph {
 
@@ -146,15 +152,40 @@ bool is_hypertree(const std::vector<std::vector<int>>& bags, int n) {
 
 
 /*
- *  Given a set of bags that admit a join tree, construct one such join tree.
- *  output format: {root, list of children of each node}
+ * Given a set of bags that admit a join tree, construct one such join tree.
  *
+ * Primary objective:
+ *   maximize the sum of intersection sizes.
+ *
+ * Secondary objective:
+ *   minimize the sum of AGM bounds of the graphs induced by the union
+ *   of the two endpoint bags.
+ *
+ * total_join_cost:
+ *   sum of the AGM costs of the selected join-tree edges.
+ *
+ * Output format:
+ *   {root, list of children of each node}
  */
-std::pair<int, std::vector<std::vector<int>>> recover_join_tree(const std::vector<std::vector<int>>& bags, int n) {
-int B = (int)bags.size();
-    // can be centroid or zero, default is zero
+std::pair<int, std::vector<std::vector<int>>> recover_join_tree(
+    const std::vector<std::vector<int>>& bags,
+    int n,
+    const std::vector<std::pair<int, int>>& query_edges,
+    const std::vector<int>& weights,
+    double& total_join_cost
+) {
+    const int B = static_cast<int>(bags.size());
+
     std::string mode = "zero";
     std::vector<std::vector<int>> children(B);
+
+    total_join_cost = 0.0;
+
+    if (query_edges.size() != weights.size()) {
+        throw std::runtime_error(
+            "recover_join_tree: query_edges and weights have different sizes"
+        );
+    }
 
     if (B == 0) {
         return {-1, children};
@@ -165,27 +196,36 @@ int B = (int)bags.size();
     }
 
     struct DSU {
-        std::vector<int> p, sz;
+        std::vector<int> parent;
+        std::vector<int> size;
 
-        DSU(int n) : p(n), sz(n, 1) {
-            std::iota(p.begin(), p.end(), 0);
+        explicit DSU(int n)
+            : parent(n), size(n, 1) {
+            std::iota(parent.begin(), parent.end(), 0);
         }
 
         int find(int x) {
-            if (p[x] == x) return x;
-            return p[x] = find(p[x]);
+            if (parent[x] == x) {
+                return x;
+            }
+
+            return parent[x] = find(parent[x]);
         }
 
         bool unite(int a, int b) {
             a = find(a);
             b = find(b);
 
-            if (a == b) return false;
+            if (a == b) {
+                return false;
+            }
 
-            if (sz[a] < sz[b]) std::swap(a, b);
+            if (size[a] < size[b]) {
+                std::swap(a, b);
+            }
 
-            p[b] = a;
-            sz[a] += sz[b];
+            parent[b] = a;
+            size[a] += size[b];
 
             return true;
         }
@@ -194,94 +234,182 @@ int B = (int)bags.size();
     auto intersection_size = [&](int i, int j) {
         std::vector<char> seen(n, 0);
 
-        for (int x : bags[i]) {
-            seen[x] = 1;
+        for (int vertex : bags[i]) {
+            seen[vertex] = 1;
         }
 
-        int cnt = 0;
+        int count = 0;
 
-        for (int x : bags[j]) {
-            if (seen[x]) cnt++;
+        for (int vertex : bags[j]) {
+            if (seen[vertex]) {
+                ++count;
+            }
         }
 
-        return cnt;
+        return count;
+    };
+
+    auto calculate_join_cost = [&](int i, int j) {
+        std::vector<char> in_union(n, 0);
+
+        for (int vertex : bags[i]) {
+            in_union[vertex] = 1;
+        }
+
+        for (int vertex : bags[j]) {
+            in_union[vertex] = 1;
+        }
+
+        std::vector<solver::Edge> induced_subgraph;
+        induced_subgraph.reserve(query_edges.size());
+
+        for (
+            int edge_id = 0;
+            edge_id < static_cast<int>(query_edges.size());
+            ++edge_id
+        ) {
+            const int u = query_edges[edge_id].first;
+            const int v = query_edges[edge_id].second;
+
+            if (!in_union[u] || !in_union[v]) {
+                continue;
+            }
+
+            solver::Edge induced_edge{};
+            induced_edge.u = u;
+            induced_edge.v = v;
+            induced_edge.w = std::log2(
+                static_cast<double>(
+                    std::max(1, weights[edge_id])
+                )
+            );
+
+            induced_subgraph.push_back(induced_edge);
+        }
+
+        if (induced_subgraph.empty()) {
+            return 1.0;
+        }
+
+        solver::FractionalEdgeCoverSolver fec_solver;
+
+        solver::Result result = fec_solver.solve(
+            induced_subgraph,
+            n
+        );
+
+        return std::exp2(result.objective_value);
     };
 
     struct Edge {
-        int u, v, w;
+        int u;
+        int v;
+        int intersection;
+        double join_cost;
     };
 
     std::vector<Edge> complete_graph_edges;
+    complete_graph_edges.reserve(B * (B - 1) / 2);
 
-    for (int i = 0; i < B; i++) {
-        for (int j = i + 1; j < B; j++) {
+    for (int i = 0; i < B; ++i) {
+        for (int j = i + 1; j < B; ++j) {
             complete_graph_edges.push_back({
                 i,
                 j,
-                intersection_size(i, j)
+                intersection_size(i, j),
+                calculate_join_cost(i, j)
             });
         }
     }
 
-    // Maximum spanning tree by intersection size.
+    /*
+     * First maximize separator size, preserving the join-tree property.
+     * For equal separator sizes, choose lower estimated join cost.
+     */
     std::sort(
         complete_graph_edges.begin(),
         complete_graph_edges.end(),
         [](const Edge& a, const Edge& b) {
-            return a.w > b.w;
+            if (a.intersection != b.intersection) {
+                return a.intersection > b.intersection;
+            }
+
+            if (a.join_cost != b.join_cost) {
+                return a.join_cost < b.join_cost;
+            }
+
+            if (a.u != b.u) {
+                return a.u < b.u;
+            }
+
+            return a.v < b.v;
         }
     );
 
     DSU dsu(B);
     std::vector<std::vector<int>> undirected_tree(B);
 
-    for (const Edge& e : complete_graph_edges) {
-        if (dsu.unite(e.u, e.v)) {
-            undirected_tree[e.u].push_back(e.v);
-            undirected_tree[e.v].push_back(e.u);
+    int selected_edges = 0;
+
+    for (const Edge& edge : complete_graph_edges) {
+        if (!dsu.unite(edge.u, edge.v)) {
+            continue;
+        }
+
+        undirected_tree[edge.u].push_back(edge.v);
+        undirected_tree[edge.v].push_back(edge.u);
+
+        total_join_cost += edge.join_cost;
+
+        ++selected_edges;
+
+        if (selected_edges == B - 1) {
+            break;
         }
     }
 
-    // centroid version
-    // Orient the tree from root 0.
-    /*
-     * Find a centroid of the undirected join tree.
-     *
-     * A centroid is a node c such that, after removing c,
-     * every connected component has size at most B / 2.
-     */
-    
-    if(mode == "centroid"){
+    if (selected_edges != B - 1) {
+        throw std::runtime_error(
+            "recover_join_tree produced a disconnected tree"
+        );
+    }
+
+    if (mode == "centroid") {
         std::vector<int> parent(B, -1);
         std::vector<int> order;
         order.reserve(B);
 
-        std::queue<int> q;
-        parent[0] = 0;
-        q.push(0);
+        std::queue<int> queue;
 
-        while (!q.empty()) {
-            int u = q.front();
-            q.pop();
+        parent[0] = 0;
+        queue.push(0);
+
+        while (!queue.empty()) {
+            const int u = queue.front();
+            queue.pop();
 
             order.push_back(u);
 
             for (int v : undirected_tree[u]) {
-                if (parent[v] != -1) continue;
+                if (parent[v] != -1) {
+                    continue;
+                }
 
                 parent[v] = u;
-                q.push(v);
+                queue.push(v);
             }
         }
 
-        if ((int)order.size() != B) {
-            std::cout << "recorver_join_tree produced disconnected tree" << '\n';
+        if (static_cast<int>(order.size()) != B) {
+            throw std::runtime_error(
+                "recover_join_tree produced a disconnected tree"
+            );
         }
 
         std::vector<int> subtree_size(B, 1);
 
-        for (int i = B - 1; i >= 0; i--) {
-            int u = order[i];
+        for (int index = B - 1; index >= 0; --index) {
+            const int u = order[index];
 
             for (int v : undirected_tree[u]) {
                 if (parent[v] == u) {
@@ -293,12 +421,15 @@ int B = (int)bags.size();
         int centroid = 0;
         int best_max_component = B + 1;
 
-        for (int u = 0; u < B; u++) {
+        for (int u = 0; u < B; ++u) {
             int max_component = B - subtree_size[u];
 
             for (int v : undirected_tree[u]) {
                 if (parent[v] == u) {
-                    max_component = std::max(max_component, subtree_size[v]);
+                    max_component = std::max(
+                        max_component,
+                        subtree_size[v]
+                    );
                 }
             }
 
@@ -309,48 +440,52 @@ int B = (int)bags.size();
         }
 
         children.assign(B, std::vector<int>());
-
         std::fill(parent.begin(), parent.end(), -1);
 
         parent[centroid] = centroid;
-        q.push(centroid);
+        queue.push(centroid);
 
-        while (!q.empty()) {
-            int u = q.front();
-            q.pop();
+        while (!queue.empty()) {
+            const int u = queue.front();
+            queue.pop();
 
             for (int v : undirected_tree[u]) {
-                if (parent[v] != -1) continue;
+                if (parent[v] != -1) {
+                    continue;
+                }
 
                 parent[v] = u;
                 children[u].push_back(v);
-                q.push(v);
+                queue.push(v);
             }
         }
 
-        return {centroid, children}; 
+        return {centroid, children};
     }
-    else{ // default rooting mode 
-        std::vector<int> parent(B, -1);
-        std::queue<int> q;
 
-        parent[0] = 0;
-        q.push(0);
+    std::vector<int> parent(B, -1);
+    std::queue<int> queue;
 
-        while (!q.empty()) {
-            int u = q.front();
-            q.pop();
+    parent[0] = 0;
+    queue.push(0);
 
-            for (int v : undirected_tree[u]) {
-                if (parent[v] != -1) continue;
+    while (!queue.empty()) {
+        const int u = queue.front();
+        queue.pop();
 
-                parent[v] = u;
-                children[u].push_back(v);
-                q.push(v);
+        for (int v : undirected_tree[u]) {
+            if (parent[v] != -1) {
+                continue;
             }
-        }
 
-        return {0, children}; 
+            parent[v] = u;
+            children[u].push_back(v);
+            queue.push(v);
+        }
     }
+
+    return {0, children};
 }
+
+
 } // namespace hypergraph

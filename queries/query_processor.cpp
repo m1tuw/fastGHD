@@ -798,6 +798,7 @@ int main(int argc, char** argv) {
             cerr << "  system time: " << fixed << setprecision(9) << system_seconds << "s\n";
             cerr << "  cardinality: " << cardinality << '\n';
         }
+        cerr << "ghd shape: " << ghd_shape << '\n';
         cerr << "td solver user time: "
             << fixed << setprecision(9)
             << td_user_seconds << "s\n";
