@@ -49,7 +49,7 @@ qdag* yannakakis(ghd root, std::optional<std::reference_wrapper<std::ofstream>> 
     root.deep_exec_multijoin();
 
     yk_bags_user_seconds = yk_current_user_seconds() - user_start;
-
+    std::cout << "qdags on bags finished" << '\n';
 
     /*
     aca parte la segunda fase
@@ -63,7 +63,7 @@ qdag* yannakakis(ghd root, std::optional<std::reference_wrapper<std::ofstream>> 
     root.constrain_children();
 
     yk_semijoins_user_seconds = yk_current_user_seconds() - user_start;
-
+    std::cout << "semijoins finished" << '\n';
 
     /*
     aca parte la tercera fase
@@ -81,7 +81,8 @@ qdag* yannakakis(ghd root, std::optional<std::reference_wrapper<std::ofstream>> 
     if(outfile){
         outfile->get() << init << "," << mid << "," << end;
     }
-    
+    std::cout << "final multijoin finished" << '\n';
+
     return qResult;
 }
 
