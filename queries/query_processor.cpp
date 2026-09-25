@@ -51,6 +51,9 @@ struct BuiltQuery {
     vector<pair<int, int>> edges;
     vector<int> weights;
     uint64_t grid_side = 1;
+
+    uint64_t input_triples = 0;
+    uint64_t initial_qdag_bytes = 0;
 };
 
 static void print_usage(const char* program_name) {
@@ -306,6 +309,9 @@ static BuiltQuery build_query(const ParsedQuery& query, const Options& opt) {
         vector<vector<uint64_t>> relation_copy =
             *relation_by_predicate.at(atom.predicate);
 
+        // total de triples de entrada de la query
+        built.input_triples += relation_copy.size();
+
         built.qdags.emplace_back(
             relation_copy,
             attributes,
@@ -314,27 +320,20 @@ static BuiltQuery build_query(const ParsedQuery& query, const Options& opt) {
             attributes.size()
         );
 
-/*
-        if (opt.debug) {
-            cerr << "[atom] " << atom.subject_name << ' '
-                 << atom.predicate << ' ' << atom.object_name
-                 << " attrs=(" << atom.subject_id << "," << atom.object_id << ")"
-                 << " stored_attrs={ ";
+        // espacio total del qdag inicial recién construido
+        built.initial_qdag_bytes += built.qdags.back().size();
 
-            for (uint64_t j = 0; j < built.qdags.back().nAttr(); ++j) {
-                cerr << built.qdags.back().getAttr(j) << ' ';
-            }
+        built.edges.emplace_back(
+            atom.subject_id,
+            atom.object_id
+        );
 
-            cerr << "} qdag_cardinality="
-                 << qdag_cardinality(built.qdags.back())
-                 << endl;
-        }
-*/
-        built.edges.emplace_back(atom.subject_id, atom.object_id);
         if (opt.unit_weights) {
             built.weights.push_back(1);
         } else {
-            built.weights.push_back(relation_weight_by_predicate.at(atom.predicate));
+            built.weights.push_back(
+                relation_weight_by_predicate.at(atom.predicate)
+            );
         }
     }
 
@@ -568,6 +567,8 @@ static void append_benchmark(
     double ghd_wall_seconds,
     double ghd_user_seconds,
     double ghd_system_seconds,
+    uint64_t input_triples,
+    uint64_t initial_qdag_bytes,
     uint64_t cardinality
 ) {
     if (opt.benchmark_file.empty()) {
@@ -594,6 +595,7 @@ static void append_benchmark(
             << "ghd_wall_seconds,ghd_user_seconds,ghd_system_seconds,"
             << "bags_user_seconds,semijoins_user_seconds,"
             << "final_qdag_user_seconds,"
+            << "input_triples,initial_qdag_bytes,"
             << "cardinality\n";
     }
 
@@ -612,6 +614,8 @@ static void append_benchmark(
         << yk_bags_user_seconds << ','
         << yk_semijoins_user_seconds << ','
         << yk_final_qdag_user_seconds << ','
+        << input_triples << ','
+        << initial_qdag_bytes << ','
         << cardinality << '\n';
 }
 
@@ -821,6 +825,12 @@ int main(int argc, char** argv) {
 
         cerr << "cardinality: "
             << cardinality << '\n';
+
+        cerr << "  input triples:      "
+         << built.input_triples << '\n';
+
+        cerr << "  initial qdag bytes: "
+            << built.initial_qdag_bytes << '\n';
         append_benchmark(
             opt,
             query,
@@ -831,6 +841,8 @@ int main(int argc, char** argv) {
             td_wall_seconds,
             td_user_seconds,
             td_system_seconds,
+            built.input_triples,
+            built.initial_qdag_bytes,
             cardinality
         );
 
