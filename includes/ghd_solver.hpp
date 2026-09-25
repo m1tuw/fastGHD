@@ -96,7 +96,7 @@ public:
         result.join_tree_root = xd.first;
 
         
-        if (true) {
+        if (false) {
             std::cout << "\n[GHD solver] result.weight: " << result.weight << '\n';
 
             std::cout << "[GHD solver] bags:\n";

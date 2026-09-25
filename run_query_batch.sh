@@ -7,7 +7,7 @@ MODE="yk"
 
 mkdir -p results tmp_queries
 
-BENCH_OUT="results/test_weightedyk_newmodel.csv"
+BENCH_OUT="results/finalpaper_space_bags.csv"
 : > "$BENCH_OUT"
 
 global_query_id=0
@@ -44,9 +44,8 @@ for QUERY_LIST in "$QUERY_DIR"/*.txt; do
       --data-dir "$DATA_DIR" \
       --mode "$MODE" \
       --no-dump \
-      --debug \
-      --unit-weights \
-      --bench "$BENCH_OUT"
+      --bench "$BENCH_OUT" \
+      --debug
 
   done < "$QUERY_LIST"
 done

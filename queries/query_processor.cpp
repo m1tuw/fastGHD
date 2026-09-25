@@ -837,7 +837,7 @@ int main(int argc, char** argv) {
          << built.input_triples << '\n';
 
         cerr << "  initial qdag bytes: "
-            << built.initial_qdag_bytes << '\n';
+            << built.total_qdag_bytes_after_first_phase << '\n';
         // hay una decision de disenho muy cuestionable aca, donde dice el size inicial en realidad
         // son los bytes usados despues de la primera fase.
         // todo: sumar el espacio de los bitmaps adicionales que necesita el semijoin
