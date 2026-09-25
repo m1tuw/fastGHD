@@ -54,6 +54,7 @@ struct BuiltQuery {
 
     uint64_t input_triples = 0;
     uint64_t initial_qdag_bytes = 0;
+    uint64_t total_qdag_bytes_after_first_phase = 0;
 };
 
 static void print_usage(const char* program_name) {
@@ -718,12 +719,18 @@ static qdag* execute_query(
     if (opt.debug) {
         cout << "[yk] GHD computed, running yannakakis..." << endl;
     }
-
+    // query plan listo
     rusage usage_start{}, usage_end{};
     getrusage(RUSAGE_SELF, &usage_start);
     auto wall_start = steady_clock::now();
 
+    // aca hace el yannakakis de una
+    // yannakakis en src/optimal_joins
+    bytes_used_after_first_phase = 0;
     qdag* ans = yannakakis(root, {});
+    built.total_qdag_bytes_after_first_phase += bytes_used_after_first_phase;
+    
+
 
     auto wall_stop = steady_clock::now();
     getrusage(RUSAGE_SELF, &usage_end);
@@ -831,6 +838,9 @@ int main(int argc, char** argv) {
 
         cerr << "  initial qdag bytes: "
             << built.initial_qdag_bytes << '\n';
+        // hay una decision de disenho muy cuestionable aca, donde dice el size inicial en realidad
+        // son los bytes usados despues de la primera fase.
+        // todo: sumar el espacio de los bitmaps adicionales que necesita el semijoin
         append_benchmark(
             opt,
             query,
@@ -842,7 +852,7 @@ int main(int argc, char** argv) {
             td_user_seconds,
             td_system_seconds,
             built.input_triples,
-            built.initial_qdag_bytes,
+            built.total_qdag_bytes_after_first_phase,
             cardinality
         );
 

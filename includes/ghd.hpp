@@ -17,6 +17,8 @@
 
 using namespace std;
 
+extern uint64_t bytes_used_after_first_phase;
+
 class ghd {
     vector<qdag> relations;
     vector<ghd> children;
@@ -77,6 +79,9 @@ public:
             return;
         }
         qdag* join_result = multiJoin(relations, false, 1000);
+        // medir espacioOoOoOO
+        bytes_used_after_first_phase += join_result->size();
+
         relations.clear();
         relations.push_back(*join_result);
         relations.shrink_to_fit();

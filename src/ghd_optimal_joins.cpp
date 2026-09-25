@@ -14,6 +14,9 @@ double yk_bags_user_seconds = 0.0;
 double yk_semijoins_user_seconds = 0.0;
 double yk_final_qdag_user_seconds = 0.0;
 
+// para medir espacio
+uint64_t bytes_used_after_first_phase = 0;
+
 static double yk_current_user_seconds() {
     rusage usage{};
     getrusage(RUSAGE_SELF, &usage);
@@ -44,9 +47,12 @@ qdag* yannakakis(ghd root, std::optional<std::reference_wrapper<std::ofstream>> 
     init = root.size();
     //cout << "GHD size before multijoins:" << root.size() << endl;
     // Ejecutar multijoin en todos los niveles
+    // aca tengo que medir memoria!!!!
     double user_start = yk_current_user_seconds();
 
+    bytes_used_after_first_phase = 0;
     root.deep_exec_multijoin();
+    
 
     yk_bags_user_seconds = yk_current_user_seconds() - user_start;
     std::cout << "qdags on bags finished" << '\n';
