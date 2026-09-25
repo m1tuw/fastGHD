@@ -18,6 +18,7 @@
 using namespace std;
 
 extern uint64_t bytes_used_after_first_phase;
+extern uint64_t surviving_triples;
 
 class ghd {
     vector<qdag> relations;
@@ -81,6 +82,7 @@ public:
         qdag* join_result = multiJoin(relations, false, 1000);
         // medir espacioOoOoOO
         bytes_used_after_first_phase += join_result->size();
+        surviving_triples += join_result->n_ones();
 
         relations.clear();
         relations.push_back(*join_result);

@@ -52,6 +52,7 @@ struct BuiltQuery {
     vector<int> weights;
     uint64_t grid_side = 1;
 
+    uint64_t surviving_triples;
     uint64_t input_triples = 0;
     uint64_t initial_qdag_bytes = 0;
     uint64_t total_qdag_bytes_after_first_phase = 0;
@@ -596,7 +597,7 @@ static void append_benchmark(
             << "ghd_wall_seconds,ghd_user_seconds,ghd_system_seconds,"
             << "bags_user_seconds,semijoins_user_seconds,"
             << "final_qdag_user_seconds,"
-            << "input_triples,initial_qdag_bytes,"
+            << "surviving_triples,bag_qdag_bytes,"
             << "cardinality\n";
     }
 
@@ -727,8 +728,10 @@ static qdag* execute_query(
     // aca hace el yannakakis de una
     // yannakakis en src/optimal_joins
     bytes_used_after_first_phase = 0;
+    surviving_triples = 0;
     qdag* ans = yannakakis(root, {});
     built.total_qdag_bytes_after_first_phase += bytes_used_after_first_phase;
+    built.surviving_triples += surviving_triples;
     
 
 
@@ -851,7 +854,7 @@ int main(int argc, char** argv) {
             td_wall_seconds,
             td_user_seconds,
             td_system_seconds,
-            built.input_triples,
+            built.surviving_triples,
             built.total_qdag_bytes_after_first_phase,
             cardinality
         );

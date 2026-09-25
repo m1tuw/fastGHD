@@ -16,6 +16,7 @@ double yk_final_qdag_user_seconds = 0.0;
 
 // para medir espacio
 uint64_t bytes_used_after_first_phase = 0;
+uint64_t surviving_triples = 0;
 
 static double yk_current_user_seconds() {
     rusage usage{};
