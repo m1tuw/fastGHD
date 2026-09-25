@@ -45,6 +45,7 @@ for QUERY_LIST in "$QUERY_DIR"/*.txt; do
       --mode "$MODE" \
       --no-dump \
       --bench "$BENCH_OUT" \
+      --unit-weights \
       --debug
 
   done < "$QUERY_LIST"

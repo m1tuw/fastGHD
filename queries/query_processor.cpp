@@ -52,7 +52,7 @@ struct BuiltQuery {
     vector<int> weights;
     uint64_t grid_side = 1;
 
-    uint64_t surviving_triples;
+    uint64_t surviving_triples = 0;
     uint64_t input_triples = 0;
     uint64_t initial_qdag_bytes = 0;
     uint64_t total_qdag_bytes_after_first_phase = 0;
@@ -836,10 +836,10 @@ int main(int argc, char** argv) {
         cerr << "cardinality: "
             << cardinality << '\n';
 
-        cerr << "  input triples:      "
-         << built.input_triples << '\n';
+        cerr << "  surviving triples:      "
+         << built.surviving_triples << '\n';
 
-        cerr << "  initial qdag bytes: "
+        cerr << "  bag_qdag bytes: "
             << built.total_qdag_bytes_after_first_phase << '\n';
         // hay una decision de disenho muy cuestionable aca, donde dice el size inicial en realidad
         // son los bytes usados despues de la primera fase.
